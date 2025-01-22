@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+/* Thème global */
+body {
+  @apply bg-[#0A0A0A] text-white;
+}
+
+/* Styles des composants communs */
+.btn {
+  @apply px-4 py-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20;
+}
+
+.btn-primary {
+  @apply bg-white text-black hover:bg-white/90;
+}
+
+.btn-secondary {
+  @apply bg-zinc-800 text-white hover:bg-zinc-700;
+}
+
+.input {
+  @apply bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 text-white placeholder-zinc-400
+         focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent
+         transition-all duration-200;
+}
+
+.card {
+  @apply bg-zinc-900 rounded-lg border border-zinc-800;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-zinc-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-700 rounded-full hover:bg-zinc-600 transition-colors;
+}
+
+/* Styles pour le markdown */
+.prose {
+  @apply prose-invert max-w-none;
+}
+
+.prose pre {
+  @apply bg-black rounded-lg border border-zinc-800 !important;
+}
+
+.prose code {
+  @apply bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded text-sm !important;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0 !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Transitions */
+.transition-smooth {
+  @apply transition-all duration-200 ease-in-out;
+}

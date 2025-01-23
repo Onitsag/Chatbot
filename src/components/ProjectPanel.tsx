@@ -1,12 +1,14 @@
-import React from 'react';
 import { useStore } from '../store';
-import { File, Settings, Plus, Trash2, MessageSquare, Upload, Edit2, Check, X } from 'lucide-react';
+import { useFileSystem } from '../hooks/useFileSystem';
+import { FileTree } from './FileTree';
+import { File, Settings, Plus, Trash2, MessageSquare, Upload, Edit2, Check, X, FolderOpen } from 'lucide-react';
 import { ProjectFile } from '../types';
 import { Editor } from './Editor';
 import { ProjectModal } from './ProjectModal';
 import { ChatWindow } from './ChatWindow';
 import { AI_MODELS } from '../services/ai';
 import { EmojiPicker } from './EmojiPicker';
+import { useState, useEffect, useRef } from 'react';
 
 export function ProjectPanel() {
   const {
@@ -26,103 +28,109 @@ export function ProjectPanel() {
     updateChatEmoji
   } = useStore();
 
-  const [selectedFile, setSelectedFile] = React.useState<ProjectFile | null>(null);
-  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = React.useState(false);
-  const [showingChat, setShowingChat] = React.useState(false);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [editingChatId, setEditingChatId] = React.useState<string | null>(null);
-  const [editingChatTitle, setEditingChatTitle] = React.useState('');
-  const [editingEmoji, setEditingEmoji] = React.useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<ProjectFile | null>(null);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [showingChat, setShowingChat] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingChatTitle, setEditingChatTitle] = useState('');
+  const [editingEmoji, setEditingEmoji] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [isRenaming, setIsRenaming] = useState<string | null>(null);
+  const [newName, setNewName] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [autoSaveInterval, setAutoSaveInterval] = useState<number | null>(null);
+  const [lastSavedContent, setLastSavedContent] = useState<string>('');
+
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Système de fichiers
+  const {
+    isPWA,
+    hasFileSystemAccess,
+    fileTree,
+    isLoading,
+    requestFileSystemAccess,
+    readFileContent,
+    writeFileContent,
+    createFile,
+    createDirectory,
+    deleteEntry,
+    renameEntry,
+    refreshFileTree,
+    watchFileChanges,
+    moveEntry,
+    copyEntry,
+    fileStats,
+    rootDirectory,  // Ajout de cette ligne
+  } = useFileSystem();
+
+
 
   const currentProject = projects.find(p => p.id === currentProjectId);
   const projectChats = chats.filter(chat => chat.projectId === currentProjectId);
 
-  React.useEffect(() => {
+  // Reset du chat courant quand on change de projet
+  useEffect(() => {
     setCurrentChat(null);
   }, [currentProjectId, setCurrentChat]);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    if (!currentProject) return;
-
-    const items = Array.from(e.dataTransfer.items);
-    const files = items
-      .filter(item => item.kind === 'file')
-      .map(item => item.getAsFile())
-      .filter((file): file is File => file !== null);
-
-    for (const file of files) {
-      try {
-        const content = await file.text();
-        const extension = file.name.split('.').pop()?.toLowerCase() || '';
-        
-        let language = 'plaintext';
-        switch (extension) {
-          case 'js':
-            language = 'javascript';
-            break;
-          case 'ts':
-          case 'tsx':
-            language = 'typescript';
-            break;
-          case 'jsx':
-            language = 'javascript';
-            break;
-          case 'html':
-            language = 'html';
-            break;
-          case 'css':
-            language = 'css';
-            break;
-          case 'json':
-            language = 'json';
-            break;
-          case 'md':
-            language = 'markdown';
-            break;
-          case 'py':
-            language = 'python';
-            break;
+  // Surveillance des changements de fichiers
+  useEffect(() => {
+    if (hasFileSystemAccess) {
+      const unwatch = watchFileChanges(async (path) => {
+        if (selectedFile && path === selectedFile.path) {
+          const content = await readFileContent(path);
+          setSelectedFile(prev => prev ? { ...prev, content } : null);
         }
+        refreshFileTree();
+      });
+      return unwatch;
+    }
+  }, [hasFileSystemAccess, selectedFile, watchFileChanges, readFileContent, refreshFileTree]);
 
-        const newFile = {
-          name: file.name,
-          path: '/',
-          content,
-          language,
-          lastModified: Date.now()
-        };
+  // Auto-save
+  useEffect(() => {
+    if (hasUnsavedChanges && selectedFile) {
+      const interval = window.setInterval(async () => {
+        try {
+          await handleSaveFile();
+          console.log('Auto-saved:', selectedFile.path);
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
+      }, 30000); // Auto-save every 30 seconds
 
-        addFile(currentProject.id, newFile);
-      } catch (error) {
-        console.error(`Erreur lors de la lecture du fichier ${file.name}:`, error);
+      setAutoSaveInterval(interval);
+      return () => clearInterval(interval);
+    }
+    return () => { };
+  }, [hasUnsavedChanges, selectedFile]);
+
+  // Nettoyage de l'intervalle d'auto-save
+  useEffect(() => {
+    return () => {
+      if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
       }
-    }
-  };
+    };
+  }, [autoSaveInterval]);
 
-  const handleFileChange = (content: string) => {
-    if (!currentProject || !selectedFile) return;
-    updateFile(currentProject.id, selectedFile.id, content);
-  };
+  // Gestion des raccourcis clavier
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S pour sauvegarder
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && selectedFile) {
+        e.preventDefault();
+        await handleSaveFile();
+      }
+    };
 
-  const handleUpdateProject = (data: { name: string; description: string; systemPrompt: string }) => {
-    if (currentProject) {
-      updateProject(currentProject.id, data);
-    }
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFile]);
 
+  // Gestion des chats
   const handleCreateChat = () => {
     if (!currentProject) return;
     addChat(AI_MODELS[0], currentProject.id);
@@ -146,6 +154,202 @@ export function ProjectPanel() {
     setEditingChatTitle('');
   };
 
+  const handleMoveEntry = async (oldPath: string, newPath: string) => {
+    try {
+      await moveEntry(oldPath, newPath);
+      await refreshFileTree();
+    } catch (error) {
+      console.error('Error moving entry:', error);
+    }
+  };
+
+  const handleCopyEntry = async (sourcePath: string, destPath: string) => {
+    try {
+      await copyEntry(sourcePath, destPath);
+      await refreshFileTree();
+    } catch (error) {
+      console.error('Error copying entry:', error);
+    }
+  };
+
+
+  // Gestion des fichiers
+  const handleFileSelect = async (path: string) => {
+    if (!hasFileSystemAccess) return;
+
+    // Vérifier les changements non sauvegardés
+    if (hasUnsavedChanges) {
+      const confirm = window.confirm('Vous avez des modifications non sauvegardées. Voulez-vous continuer ?');
+      if (!confirm) return;
+    }
+
+    try {
+      const content = await readFileContent(path);
+      const extension = path.split('.').pop()?.toLowerCase() || '';
+
+      let language = 'plaintext';
+      switch (extension) {
+        case 'js': language = 'javascript'; break;
+        case 'ts':
+        case 'tsx': language = 'typescript'; break;
+        case 'jsx': language = 'javascript'; break;
+        case 'html': language = 'html'; break;
+        case 'css': language = 'css'; break;
+        case 'json': language = 'json'; break;
+        case 'md': language = 'markdown'; break;
+        case 'py': language = 'python'; break;
+      }
+
+      const file: ProjectFile = {
+        id: path,
+        name: path.split('/').pop() || '',
+        path,
+        content,
+        language,
+        lastModified: Date.now()
+      };
+
+      setSelectedFile(file);
+      setLastSavedContent(content);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Erreur lors de la lecture du fichier:', error);
+    }
+  };
+
+  const handleFileChange = async (content: string) => {
+    if (!selectedFile) return;
+
+    setSelectedFile(prev => prev ? { ...prev, content } : null);
+    setHasUnsavedChanges(content !== lastSavedContent);
+  };
+
+  const handleSaveFile = async () => {
+    if (!selectedFile || !hasUnsavedChanges) return;
+
+    try {
+      await writeFileContent(selectedFile.path, selectedFile.content);
+      setLastSavedContent(selectedFile.content);
+      setHasUnsavedChanges(false);
+      console.log('File saved:', selectedFile.path);
+    } catch (error) {
+      console.error('Error saving file:', error);
+    }
+  };
+
+  const handleCreateFile = async (path: string) => {
+    try {
+      await createFile(path);
+      await refreshFileTree();
+      handleFileSelect(path);
+    } catch (error) {
+      console.error('Error creating file:', error);
+    }
+  };
+
+  const handleCreateDirectory = async (path: string) => {
+    try {
+      await createDirectory(path);
+      await refreshFileTree();
+      setExpandedFolders(prev => new Set([...prev, path]));
+    } catch (error) {
+      console.error('Error creating directory:', error);
+    }
+  };
+
+  const handleDeleteEntry = async (path: string) => {
+    const confirm = window.confirm('Êtes-vous sûr de vouloir supprimer cet élément ?');
+    if (!confirm) return;
+
+    try {
+      if (selectedFile?.path === path) {
+        setSelectedFile(null);
+      }
+      await deleteEntry(path);
+      await refreshFileTree();
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+    }
+  };
+
+  const handleRename = (path: string) => {
+    setIsRenaming(path);
+    setNewName(path.split('/').pop() || '');
+    setTimeout(() => renameInputRef.current?.focus(), 0);
+  };
+
+  const handleRenameSubmit = async (oldPath: string) => {
+    if (!newName.trim()) return;
+
+    try {
+      const parts = oldPath.split('/');
+      parts.pop();
+      const newPath = [...parts, newName].join('/');
+
+      await renameEntry(oldPath, newPath);
+
+      if (selectedFile?.path === oldPath) {
+        setSelectedFile(prev => prev ? { ...prev, path: newPath, name: newName } : null);
+      }
+
+      setIsRenaming(null);
+      setNewName('');
+      await refreshFileTree();
+    } catch (error) {
+      console.error('Error renaming entry:', error);
+    }
+  };
+
+  const toggleFolder = (path: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
+
+  // Drag & drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (!hasFileSystemAccess) {
+      alert('Veuillez d\'abord sélectionner un dossier de travail');
+      return;
+    }
+
+    const items = Array.from(e.dataTransfer.items);
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        try {
+          const content = await file.text();
+          await createFile(file.name, content);
+        } catch (error) {
+          console.error('Error processing dropped file:', error);
+        }
+      }
+    }
+
+    await refreshFileTree();
+  };
+
   if (!currentProject) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-800">
@@ -159,7 +363,9 @@ export function ProjectPanel() {
 
   return (
     <div className="flex flex-1 h-screen overflow-hidden">
+      {/* Sidebar gauche */}
       <div className="w-64 border-r border-gray-700 flex flex-col">
+        {/* En-tête du projet */}
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-semibold text-white">{currentProject.name}</h1>
@@ -173,31 +379,31 @@ export function ProjectPanel() {
           <p className="text-gray-400 text-sm mb-4">{currentProject.description}</p>
         </div>
 
+        {/* Sélecteur de vue (Chats/Fichiers) */}
         <div className="p-4 border-b border-gray-700">
           <div className="flex gap-2">
             <button
-              onClick={() => setShowingChat(false)}
-              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${
-                !showingChat
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              Fichiers
-            </button>
-            <button
               onClick={() => setShowingChat(true)}
-              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${
-                showingChat
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
+              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${showingChat
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
             >
               Chats
+            </button>
+            <button
+              onClick={() => setShowingChat(false)}
+              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${!showingChat
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+            >
+              Fichiers
             </button>
           </div>
         </div>
 
+        {/* Contenu de la sidebar */}
         <div className="flex-1 overflow-y-auto">
           {showingChat ? (
             <div className="p-4 space-y-2">
@@ -212,11 +418,10 @@ export function ProjectPanel() {
               {projectChats.map((chat) => (
                 <div
                   key={chat.id}
-                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                    chat.id === currentChatId
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-800/50'
-                  }`}
+                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${chat.id === currentChatId
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-300 hover:bg-gray-800/50'
+                    }`}
                   onClick={() => setCurrentChat(chat.id)}
                 >
                   {editingChatId === chat.id ? (
@@ -293,71 +498,95 @@ export function ProjectPanel() {
             </div>
           ) : (
             <div className="p-4 space-y-2">
-              <div
-                className={`p-4 border-2 border-dashed rounded-lg transition-colors ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-gray-700 hover:border-gray-600'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="flex flex-col items-center justify-center text-gray-400">
-                  <Upload size={24} className="mb-2" />
-                  <p className="text-sm text-center">
-                    Glissez et déposez vos fichiers ici
+              {isPWA ? (
+                hasFileSystemAccess ? (
+                  <div
+                    className="space-y-2"
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {isDragging && (
+                      <div className="absolute inset-0 bg-blue-500/10 border-2 border-blue-500 border-dashed rounded-lg flex items-center justify-center z-50">
+                        <div className="text-blue-500 text-lg font-medium">
+                          Déposez vos fichiers ici
+                        </div>
+                      </div>
+                    )}
+
+                    {fileTree && (
+                      <FileTree
+                        tree={fileTree}
+                        onFileSelect={handleFileSelect}
+                        onCreateFile={handleCreateFile}
+                        onCreateDirectory={handleCreateDirectory}
+                        onRename={handleRename}
+                        onDelete={handleDeleteEntry}
+                        onMove={handleMoveEntry}  // Ajout de cette prop
+                        onCopy={handleCopyEntry}  // Ajout de cette prop
+                        expandedFolders={expandedFolders}
+                        onToggleFolder={toggleFolder}
+                        fileStats={fileStats}  // Optionnel mais recommandé si disponible
+                        rootDirectory={rootDirectory}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={requestFileSystemAccess}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2.5 transition-colors disabled:opacity-50"
+                  >
+                    <FolderOpen size={20} />
+                    {isLoading ? 'Chargement...' : 'Sélectionner un dossier'}
+                  </button>
+                )
+              ) : (
+                <div className="text-center p-4 bg-gray-800 rounded-lg">
+                  <p className="text-gray-300 mb-2">
+                    Pour accéder aux fichiers de votre système, veuillez installer l'application.
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Cliquez sur l'icône d'installation dans la barre d'adresse de votre navigateur.
                   </p>
                 </div>
-              </div>
-
-              {currentProject.files.map((file) => (
-                <div
-                  key={file.id}
-                  className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                    selectedFile?.id === file.id
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-800/50'
-                  }`}
-                  onClick={() => setSelectedFile(file)}
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <File size={16} />
-                    <span className="truncate">{file.name}</span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteFile(currentProject.id, file.id);
-                      if (selectedFile?.id === file.id) {
-                        setSelectedFile(null);
-                      }
-                    }}
-                    className="hidden group-hover:block text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
+              )}
             </div>
           )}
         </div>
       </div>
 
+      {/* Zone principale */}
       <div className="flex-1 h-full overflow-hidden">
         {showingChat ? (
-          <ChatWindow projectFiles={currentProject.files} systemPrompt={currentProject.systemPrompt} />
+          <ChatWindow
+            projectFiles={currentProject.files}
+            systemPrompt={currentProject.systemPrompt}
+          />
         ) : selectedFile ? (
           <div className="flex flex-col h-full">
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <File size={16} className="text-gray-400" />
-                  <span className="text-white font-medium">{selectedFile.name}</span>
+                  <span className="text-white font-medium">{selectedFile.path}</span>
+                  {hasUnsavedChanges && (
+                    <span className="text-yellow-500 text-sm">•</span>
+                  )}
                 </div>
-                <span className="text-sm text-gray-400">
-                  Dernière modification : {new Date(selectedFile.lastModified).toLocaleString()}
-                </span>
+                <div className="flex items-center gap-4">
+                  {hasUnsavedChanges && (
+                    <button
+                      onClick={handleSaveFile}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-sm"
+                    >
+                      Sauvegarder
+                    </button>
+                  )}
+                  <span className="text-sm text-gray-400">
+                    Dernière modification : {new Date(selectedFile.lastModified).toLocaleString()}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="flex-1 overflow-hidden">
@@ -372,16 +601,26 @@ export function ProjectPanel() {
           <div className="flex-1 flex items-center justify-center bg-gray-800">
             <div className="text-center">
               <p className="text-xl text-gray-300 font-medium">Aucun fichier sélectionné</p>
-              <p className="mt-2 text-gray-400">Sélectionnez un fichier pour commencer à éditer</p>
+              <p className="mt-2 text-gray-400">
+                {isPWA
+                  ? hasFileSystemAccess
+                    ? 'Sélectionnez un fichier dans l\'arborescence pour commencer à éditer'
+                    : 'Sélectionnez un dossier pour accéder à vos fichiers'
+                  : 'Installez l\'application pour accéder à vos fichiers'}
+              </p>
             </div>
           </div>
         )}
       </div>
 
+      {/* Modal des paramètres du projet */}
       <ProjectModal
         isOpen={isProjectSettingsOpen}
         onClose={() => setIsProjectSettingsOpen(false)}
-        onSubmit={handleUpdateProject}
+        onSubmit={(data) => {
+          updateProject(currentProject.id, data);
+          setIsProjectSettingsOpen(false);
+        }}
         initialData={currentProject}
         title="Paramètres du projet"
       />

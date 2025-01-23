@@ -72,7 +72,7 @@ export default function App() {
           {/* Bouton pour plier/déplier la sidebar */}
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="absolute -right-3 top-1/2 transform -translate-y-1/2 w-6 h-12 bg-gray-800 text-gray-300 hover:text-white rounded-r-lg flex items-center justify-center border-t border-r border-b border-gray-700"
+            className="absolute -right-3 top-1/2 transform -translate-y-1/2 w-6 h-12 bg-gray-900 text-gray-300 hover:text-white rounded-r-lg flex items-center justify-center border-t border-r border-b border-gray-700"
           >
             {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>

@@ -335,7 +335,7 @@ export function ChatWindow({
 
     try {
       // Construire un message system invisible
-      const systemBase = `Tu es Georges, un assistant IA. Réponds brièvement. L'utilisateur peut t'envoyer des images en mentionnant leur nom, exemple "@image.png". Tu peux voir l'image grâce à la description qui se trouve automatiquement entre parenthèse après la mention de l'image en question.\n`;
+      const systemBase = `Tu es un assistant IA. Réponds brièvement. L'utilisateur peut t'envoyer des images en mentionnant leur nom, exemple "@image.png". Tu peux voir l'image grâce à la description qui se trouve automatiquement entre parenthèse après la mention de l'image en question.\n`;
       const fullSystem = systemPrompt
         ? systemBase + "\n" + systemPrompt
         : systemBase;

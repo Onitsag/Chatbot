@@ -41,10 +41,11 @@ export function ProjectPanel() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [autoSaveInterval, setAutoSaveInterval] = useState<number | null>(null);
   const [lastSavedContent, setLastSavedContent] = useState<string>('');
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [fileContents, setFileContents] = useState<Record<string, string>>({});
 
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  // Système de fichiers
   const {
     isPWA,
     hasFileSystemAccess,
@@ -62,10 +63,9 @@ export function ProjectPanel() {
     moveEntry,
     copyEntry,
     fileStats,
-    rootDirectory,  // Ajout de cette ligne
+    rootDirectory,
+    getAllFilesInDirectory
   } = useFileSystem();
-
-
 
   const currentProject = projects.find(p => p.id === currentProjectId);
   const projectChats = chats.filter(chat => chat.projectId === currentProjectId);
@@ -99,12 +99,12 @@ export function ProjectPanel() {
         } catch (error) {
           console.error('Auto-save failed:', error);
         }
-      }, 30000); // Auto-save every 30 seconds
+      }, 30000);
 
       setAutoSaveInterval(interval);
       return () => clearInterval(interval);
     }
-    return () => { };
+    return () => {};
   }, [hasUnsavedChanges, selectedFile]);
 
   // Nettoyage de l'intervalle d'auto-save
@@ -119,7 +119,6 @@ export function ProjectPanel() {
   // Gestion des raccourcis clavier
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // Ctrl/Cmd + S pour sauvegarder
       if ((e.ctrlKey || e.metaKey) && e.key === 's' && selectedFile) {
         e.preventDefault();
         await handleSaveFile();
@@ -129,6 +128,38 @@ export function ProjectPanel() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedFile]);
+
+  // Mise à jour des fichiers sélectionnés dans le projet
+  useEffect(() => {
+    if (currentProject && currentProject.selectedFiles) {
+      // Convertir l'objet Set sérialisé en véritable Set
+      const files = Array.isArray(currentProject.selectedFiles) 
+        ? new Set(currentProject.selectedFiles)
+        : new Set();
+      setSelectedFiles(files);
+    } else {
+      setSelectedFiles(new Set());
+    }
+  }, [currentProject]);
+
+  // Chargement du contenu des fichiers sélectionnés
+  useEffect(() => {
+    const loadSelectedFilesContent = async () => {
+      const contents: Record<string, string> = {};
+      for (const path of selectedFiles) {
+        try {
+          contents[path] = await readFileContent(path);
+        } catch (error) {
+          console.error(`Error loading content for ${path}:`, error);
+        }
+      }
+      setFileContents(contents);
+    };
+
+    if (selectedFiles.size > 0) {
+      loadSelectedFilesContent();
+    }
+  }, [selectedFiles, readFileContent]);
 
   // Gestion des chats
   const handleCreateChat = () => {
@@ -154,30 +185,10 @@ export function ProjectPanel() {
     setEditingChatTitle('');
   };
 
-  const handleMoveEntry = async (oldPath: string, newPath: string) => {
-    try {
-      await moveEntry(oldPath, newPath);
-      await refreshFileTree();
-    } catch (error) {
-      console.error('Error moving entry:', error);
-    }
-  };
-
-  const handleCopyEntry = async (sourcePath: string, destPath: string) => {
-    try {
-      await copyEntry(sourcePath, destPath);
-      await refreshFileTree();
-    } catch (error) {
-      console.error('Error copying entry:', error);
-    }
-  };
-
-
   // Gestion des fichiers
   const handleFileSelect = async (path: string) => {
     if (!hasFileSystemAccess) return;
 
-    // Vérifier les changements non sauvegardés
     if (hasUnsavedChanges) {
       const confirm = window.confirm('Vous avez des modifications non sauvegardées. Voulez-vous continuer ?');
       if (!confirm) return;
@@ -219,7 +230,6 @@ export function ProjectPanel() {
 
   const handleFileChange = async (content: string) => {
     if (!selectedFile) return;
-
     setSelectedFile(prev => prev ? { ...prev, content } : null);
     setHasUnsavedChanges(content !== lastSavedContent);
   };
@@ -312,6 +322,61 @@ export function ProjectPanel() {
     });
   };
 
+  const handleFileSelectionChange = async (path: string, selected: boolean, isDirectory?: boolean) => {
+    const newSelectedFiles = new Set(selectedFiles);
+    
+    if (isDirectory) {
+      try {
+        const files = await getAllFilesInDirectory(path);
+        if (selected) {
+          files.forEach(file => newSelectedFiles.add(file));
+          for (const file of files) {
+            try {
+              const content = await readFileContent(file);
+              setFileContents(prev => ({ ...prev, [file]: content }));
+            } catch (error) {
+              console.error(`Error loading content for ${file}:`, error);
+            }
+          }
+        } else {
+          files.forEach(file => {
+            newSelectedFiles.delete(file);
+            setFileContents(prev => {
+              const next = { ...prev };
+              delete next[file];
+              return next;
+            });
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing directory ${path}:`, error);
+      }
+    } else {
+      if (selected) {
+        newSelectedFiles.add(path);
+        try {
+          const content = await readFileContent(path);
+          setFileContents(prev => ({ ...prev, [path]: content }));
+        } catch (error) {
+          console.error(`Error loading content for ${path}:`, error);
+        }
+      } else {
+        newSelectedFiles.delete(path);
+        setFileContents(prev => {
+          const next = { ...prev };
+          delete next[path];
+          return next;
+        });
+      }
+    }
+    
+    setSelectedFiles(newSelectedFiles);
+    
+    if (currentProject) {
+      updateProject(currentProject.id, { selectedFiles: newSelectedFiles });
+    }
+  };
+
   // Drag & drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -384,19 +449,21 @@ export function ProjectPanel() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowingChat(true)}
-              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${showingChat
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
+              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${
+                showingChat
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
             >
               Chats
             </button>
             <button
               onClick={() => setShowingChat(false)}
-              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${!showingChat
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
+              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${
+                !showingChat
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
             >
               Fichiers
             </button>
@@ -418,10 +485,11 @@ export function ProjectPanel() {
               {projectChats.map((chat) => (
                 <div
                   key={chat.id}
-                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${chat.id === currentChatId
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-300 hover:bg-gray-800/50'
-                    }`}
+                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    chat.id === currentChatId
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-300 hover:bg-gray-800/50'
+                  }`}
                   onClick={() => setCurrentChat(chat.id)}
                 >
                   {editingChatId === chat.id ? (
@@ -522,12 +590,14 @@ export function ProjectPanel() {
                         onCreateDirectory={handleCreateDirectory}
                         onRename={handleRename}
                         onDelete={handleDeleteEntry}
-                        onMove={handleMoveEntry}  // Ajout de cette prop
-                        onCopy={handleCopyEntry}  // Ajout de cette prop
+                        onMove={moveEntry}
+                        onCopy={copyEntry}
                         expandedFolders={expandedFolders}
                         onToggleFolder={toggleFolder}
-                        fileStats={fileStats}  // Optionnel mais recommandé si disponible
+                        fileStats={fileStats}
                         rootDirectory={rootDirectory}
+                        selectedFiles={selectedFiles}
+                        onFileSelectionChange={handleFileSelectionChange}
                       />
                     )}
                   </div>
@@ -583,9 +653,6 @@ export function ProjectPanel() {
                       Sauvegarder
                     </button>
                   )}
-                  <span className="text-sm text-gray-400">
-                    Dernière modification : {new Date(selectedFile.lastModified).toLocaleString()}
-                  </span>
                 </div>
               </div>
             </div>
@@ -621,7 +688,11 @@ export function ProjectPanel() {
           updateProject(currentProject.id, data);
           setIsProjectSettingsOpen(false);
         }}
-        initialData={currentProject}
+        initialData={{
+          ...currentProject,
+          selectedFiles,
+          fileContents
+        }}
         title="Paramètres du projet"
       />
     </div>

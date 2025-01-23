@@ -169,7 +169,9 @@ export const useStore = create<AppState>()(
           systemPrompt,
           files: [],
           created: Date.now(),
-          lastModified: Date.now()
+          lastModified: Date.now(),
+          selectedFiles: new Set<string>(),
+          directoryHandle: null
         };
 
         set((state) => ({
@@ -255,13 +257,26 @@ export const useStore = create<AppState>()(
         set((state) => ({
           apiKeys: { ...state.apiKeys, [modelId]: apiKey }
         }));
+      },
+
+      setProjectDirectory: (projectId: string, handle: FileSystemDirectoryHandle | null) => {
+        set((state) => ({
+          projects: state.projects.map((project) =>
+            project.id === projectId
+              ? { ...project, directoryHandle: handle }
+              : project
+          )
+        }));
       }
     }),
     {
       name: 'ai-chat-storage',
       partialize: (state) => ({
         chats: state.chats,
-        projects: state.projects,
+        projects: state.projects.map(project => ({
+          ...project,
+          directoryHandle: undefined // Ne pas persister le handle
+        })),
         apiKeys: state.apiKeys
       })
     }

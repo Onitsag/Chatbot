@@ -32,6 +32,8 @@ export interface Project {
   files: ProjectFile[];
   created: number;
   lastModified: number;
+  selectedFiles: Set<string>;
+  directoryHandle?: any;
 }
 
 export interface HistoryBranch {
@@ -95,4 +97,5 @@ export interface AppState {
   deleteFile: (projectId: string, fileId: string) => void;
   
   setApiKey: (modelId: string, apiKey: string) => void;
+  setProjectDirectory: (projectId: string, handle: any | null) => void;
 }

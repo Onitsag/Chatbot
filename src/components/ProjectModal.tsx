@@ -9,6 +9,8 @@ interface ProjectModalProps {
     name: string;
     description: string;
     systemPrompt: string;
+    selectedFiles?: Set<string>;
+    fileContents?: Record<string, string>;
   };
   title: string;
 }
@@ -19,6 +21,25 @@ export function ProjectModal({ isOpen, onClose, onSubmit, initialData, title }: 
     description: initialData?.description || '',
     systemPrompt: initialData?.systemPrompt || ''
   });
+
+  // Générer le prompt système complet avec les fichiers sélectionnés
+  const fullSystemPrompt = React.useMemo(() => {
+    let prompt = formData.systemPrompt;
+
+    if (initialData?.selectedFiles?.size && initialData.fileContents) {
+      prompt += '\n\nVoici les fichiers du projet :\n';
+      
+      initialData.selectedFiles.forEach(path => {
+        const content = initialData.fileContents ? initialData.fileContents[path] : '';
+        if (content) {
+          const fileName = path.split('/').pop();
+          prompt += `\n\`\`${fileName}\`\`\n\`\`\`\n${content}\n\`\`\`\n`;
+        }
+      });
+    }
+
+    return prompt;
+  }, [formData.systemPrompt, initialData?.selectedFiles, initialData?.fileContents]);
 
   if (!isOpen) return null;
 
@@ -31,7 +52,7 @@ export function ProjectModal({ isOpen, onClose, onSubmit, initialData, title }: 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-lg w-full max-w-md p-6">
+      <div className="bg-gray-900 rounded-lg w-full max-w-4xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">{title}</h2>
           <button
@@ -78,6 +99,17 @@ export function ProjectModal({ isOpen, onClose, onSubmit, initialData, title }: 
               className="w-full bg-gray-800 text-white rounded-lg p-2.5 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-[100px]"
             />
           </div>
+
+          {initialData?.selectedFiles?.size ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Prompt système complet (avec fichiers sélectionnés)
+              </label>
+              <pre className="w-full bg-gray-800 text-white rounded-lg p-2.5 border border-gray-700 overflow-auto max-h-[400px] text-xs">
+                {fullSystemPrompt}
+              </pre>
+            </div>
+          ) : null}
 
           <div className="flex justify-end gap-4 pt-4">
             <button

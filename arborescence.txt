@@ -1,0 +1,3548 @@
+📁 Arborescence du projet
+
+├── public
+│   ├── icon-192x192.png
+│   ├── icon-512x512.png
+│   └── manifest.json
+├── src
+│   ├── components
+│   │   ├── ChatWindow.tsx
+│   │   ├── Editor.tsx
+│   │   ├── EmojiPicker.tsx
+│   │   ├── FileContextMenu.tsx
+│   │   ├── FileTree.tsx
+│   │   ├── ImageGallery.tsx
+│   │   ├── ImageUploader.tsx
+│   │   ├── MapCapture.tsx
+│   │   ├── ProjectModal.tsx
+│   │   ├── ProjectPanel.tsx
+│   │   ├── SearchModal.tsx
+│   │   ├── SettingsModal.tsx
+│   │   ├── Sidebar.tsx
+│   │   └── WebcamCapture.tsx
+│   ├── hooks
+│   │   ├── useFileSystem.ts
+│   │   └── useKeyboardShortcuts.ts
+│   ├── services
+│   │   └── ai.ts
+│   ├── utils
+│   │   ├── format.ts
+│   │   ├── offlineMessages.ts
+│   │   └── processOfflineMessages.ts
+│   ├── App.tsx
+│   ├── index.css
+│   ├── main.tsx
+│   ├── store.ts
+│   ├── sw-custom.js
+│   ├── types.ts
+│   └── vite-env.d.ts
+├── .gitignore
+├── arborescence.txt
+├── eslint.config.js
+├── index.html
+├── package.json
+├── postcss.config.js
+├── project-bolt-sb1-jzrce3dn.zip
+├── README.md
+├── tailwind.config.js
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
+
+📄 Contenu des fichiers
+
+src\App.tsx:
+```
+import React, { useEffect } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { ChatWindow } from './components/ChatWindow';
+import { ProjectPanel } from './components/ProjectPanel';
+import { useStore } from './store';
+import { MessageSquare, FolderOpen, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { SettingsModal } from './components/SettingsModal';
+import { processOfflineMessages } from './utils/processOfflineMessages';
+
+export default function App() {
+  const { currentProjectId } = useStore();
+  const [view, setView] = React.useState<'chat' | 'project'>('chat');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+
+  // Demander la permission pour les notifications au démarrage
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Écouter les messages du service worker pour déclencher la synchronisation hors ligne
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SYNC_OFFLINE_MESSAGES') {
+          processOfflineMessages();
+        }
+      });
+    }
+  }, []);
+
+  // Lorsqu'on repasse en ligne, lancer la synchronisation
+  useEffect(() => {
+    const handleOnline = () => {
+      processOfflineMessages();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
+  return (
+    <div className="flex h-screen bg-gray-900 text-white">
+      {/* Sidebar principale avec bouton de collapse */}
+      <div className={`fixed left-0 top-0 h-full z-50 transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-16' : 'w-72'}`}>
+        <div className={`flex flex-col w-full h-full bg-gray-900 border-r border-gray-700 ${isSidebarCollapsed ? 'items-center' : ''}`}>
+          {/* Navigation principale */}
+          <div className={`flex p-2 gap-2 border-b border-gray-700 ${isSidebarCollapsed ? 'flex-col' : ''}`}>
+            <div className={`flex gap-2 ${isSidebarCollapsed ? 'flex-col' : 'flex-1'}`}>
+              <button
+                onClick={() => setView('chat')}
+                className={`flex items-center gap-2 ${isSidebarCollapsed ? 'w-12 h-12 justify-center' : 'flex-1'} px-4 py-2 rounded-lg transition-colors ${view === 'chat' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+              >
+                <MessageSquare size={20} />
+                {!isSidebarCollapsed && 'Chat'}
+              </button>
+              <button
+                onClick={() => setView('project')}
+                className={`flex items-center gap-2 ${isSidebarCollapsed ? 'w-12 h-12 justify-center' : 'flex-1'} px-4 py-2 rounded-lg transition-colors ${view === 'project' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+              >
+                <FolderOpen size={20} />
+                {!isSidebarCollapsed && 'Projet'}
+              </button>
+            </div>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className={`flex items-center justify-center ${isSidebarCollapsed ? 'w-12 h-12' : 'w-12'} text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors`}
+              title="Paramètres"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
+
+          {/* Sidebar spécifique à la vue */}
+          <div className="flex-1 overflow-hidden">
+            <Sidebar onViewChange={setView} currentView={view} isCollapsed={isSidebarCollapsed} />
+          </div>
+
+          {/* Bouton pour plier/déplier la sidebar */}
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="absolute -right-3 top-1/2 transform -translate-y-1/2 w-6 h-12 bg-gray-900 text-gray-300 hover:text-white rounded-r-lg flex items-center justify-center border-t border-r border-b border-gray-700"
+          >
+            {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Contenu principal avec marge à gauche pour la sidebar */}
+      <div className={`flex-1 ${isSidebarCollapsed ? 'ml-16' : 'ml-72'} transition-all duration-300`}>
+        {view === 'chat' ? (
+          <ChatWindow />
+        ) : (
+          <ProjectPanel />
+        )}
+      </div>
+
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+    </div>
+  );
+}
+
+```
+
+src\components\ChatWindow.tsx:
+```
+import React from 'react';
+import { Send, Edit2, Check, X, Loader, ChevronDown, ToggleLeft, ToggleRight, RotateCw, Camera, MapPin } from 'lucide-react';
+import { useStore } from '../store';
+import { sendMessage, generateImageDescription, AI_MODELS, streamResponse, handleFunctionCallsAndRespond } from '../services/ai';
+import { marked } from 'marked';
+import { ProjectFile, ChatImage, AIModel } from '../types';
+import { WebcamCapture } from './WebcamCapture';
+import { MapCapture } from './MapCapture';
+import { storePendingMessage } from '../utils/offlineMessages';
+import 'highlight.js/styles/github-dark.css';
+
+/**
+ * ChatWindow
+ * - Envoie un message system invisible comme 1er message (prompt system).
+ * - Permet de choisir la taille d'historique (2 à 30).
+ * - @NomImage: pas de description visible, description seulement pour l'IA.
+ */
+export function ChatWindow({
+  projectFiles,
+  systemPrompt
+}: {
+  projectFiles?: ProjectFile[];
+  systemPrompt?: string;
+}) {
+  const {
+    chats,
+    currentChatId,
+    apiKeys,
+    addMessage,
+    updateMessage,
+    setMessageEditing,
+    updateChat,
+    addImageToChat,
+    deleteImageFromChat
+  } = useStore();
+
+  // État local
+  const [input, setInput] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [isImageLoading, setIsImageLoading] = React.useState(false);
+  const [editingContent, setEditingContent] = React.useState('');
+  const [error, setError] = React.useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = React.useState<ChatImage[]>([]);
+  const [showImageSuggestions, setShowImageSuggestions] = React.useState(false);
+  const [cursorPosition, setCursorPosition] = React.useState(0);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = React.useState(false);
+  const [streamingEnabled, setStreamingEnabled] = React.useState(true);
+  const [currentResponse, setCurrentResponse] = React.useState('');
+  const [isWebcamOpen, setIsWebcamOpen] = React.useState(false);
+  const [isMapOpen, setIsMapOpen] = React.useState(false);
+
+
+  // Nouvelle fonctionnalité : limiter l'historique
+  // On lit localStorage si présent, sinon 15
+  const [historySize, setHistorySize] = React.useState(() => {
+    const saved = localStorage.getItem('historySize');
+    return saved ? parseInt(saved, 10) : 15;
+  });
+
+  const [isHistoryDropdownOpen, setIsHistoryDropdownOpen] = React.useState(false);
+
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const suggestionRef = React.useRef<HTMLDivElement>(null);
+  const chatContainerRef = React.useRef<HTMLDivElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const historyDropdownRef = React.useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Liste locale d'images
+  const [localImages, setLocalImages] = React.useState<ChatImage[]>([]);
+
+
+  const webcamSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const geolocationSupported = 'geolocation' in navigator;
+
+
+  // Sélection du chat
+  const currentChat = chats.find(chat => chat.id === currentChatId);
+
+  React.useEffect(() => {
+    localStorage.setItem('historySize', historySize.toString());
+  }, [historySize]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1) Synchronisation localImages
+  // ─────────────────────────────────────────────────────────────────────────────
+  React.useEffect(() => {
+    if (currentChat) {
+      setLocalImages([...currentChat.images]);
+    }
+  }, [currentChat?.id, currentChat?.images.length]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Fonctions utilitaires
+  // ─────────────────────────────────────────────────────────────────────────────
+  function convertToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (err) => reject(err);
+    });
+  }
+
+  function getRandomSuffix(length: number = 5): string {
+    return Math.random().toString(36).substring(2, 2 + length);
+  }
+
+  function getRandomizedName(originalName: string): string {
+    const dotIndex = originalName.lastIndexOf('.');
+    let base = originalName;
+    let ext = '';
+    if (dotIndex !== -1) {
+      base = originalName.slice(0, dotIndex);
+      ext = originalName.slice(dotIndex);
+    }
+    const suffix = getRandomSuffix(5);
+    return `${base}-${suffix}${ext}`;
+  }
+
+  // Convertir MarkDown => HTML
+  function toHtml(markdown: string) {
+    return marked.parse(markdown, { breaks: true }) as string;
+  }
+
+  // Repère @NomImage dans un message => renvoie la liste des images
+  function getMentionedImages(content: string): ChatImage[] {
+    const mentionRegex = /@([^\s]+)/g;
+    const result: ChatImage[] = [];
+    let match;
+    while ((match = mentionRegex.exec(content)) !== null) {
+      const imageName = match[1];
+      const found = localImages.find(i => i.name === imageName);
+      if (found && !result.some(x => x.id === found.id)) {
+        result.push(found);
+      }
+    }
+    return result;
+  }
+
+  function triggerNotification(message: string) {
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification(message);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            new Notification(message);
+          }
+        });
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2) Divers useEffects
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Focus auto
+  React.useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (e.key.length === 1) {
+        const activeElem = document.activeElement as HTMLElement | null;
+        if (!activeElem) return;
+        const tag = activeElem.tagName.toLowerCase();
+        if (tag !== 'textarea' && tag !== 'input') {
+          textareaRef.current?.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+  // Scroll auto
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentChat?.messages]);
+
+  // Fermer suggestions
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target as Node)) {
+        setShowImageSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Coller image
+  React.useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items || []);
+      const imageItem = items.find(it => it.type.startsWith('image/'));
+      if (imageItem) {
+        e.preventDefault();
+        const file = imageItem.getAsFile();
+        if (file) {
+          await processImage(file);
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [currentChat?.id, apiKeys]);
+
+  // Fermer dropdown IA
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsModelDropdownOpen(false);
+      }
+      if (historyDropdownRef.current && !historyDropdownRef.current.contains(e.target as Node)) {
+        setIsHistoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3) Pas de chat => ...
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (!currentChat) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gray-800">
+        <div className="text-center">
+          <p className="text-xl text-gray-300 font-medium">Aucune conversation sélectionnée</p>
+          <p className="mt-2 text-gray-400">Sélectionnez ou créez une conversation pour commencer</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // processImage => rename + desc + store
+  // ─────────────────────────────────────────────────────────────────────────────
+  async function processImage(file: File) {
+    if (!file.type.startsWith('image/')) {
+      setError('Le fichier doit être une image');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('L\'image ne doit pas dépasser 5MB');
+      return;
+    }
+    try {
+      setError(null);
+      setIsImageLoading(true);
+
+      const rName = getRandomizedName(file.name);
+      console.log(`[processImage] rename "${file.name}" => "${rName}"`);
+
+      const base64 = await convertToBase64(file);
+      if (!currentChat) {
+        setError('Aucune conversation sélectionnée');
+        return;
+      }
+      const desc = await generateImageDescription(apiKeys[currentChat.model.id], base64);
+
+      const newImg: ChatImage = {
+        id: crypto.randomUUID(),
+        base64,
+        description: desc,
+        name: rName,
+        timestamp: Date.now()
+      };
+
+      setLocalImages(prev => [...prev, newImg]);
+      await addImageToChat(currentChat.id, {
+        base64,
+        description: desc,
+        name: rName,
+        timestamp: Date.now()
+      });
+      console.log('[processImage] Image added =>', rName);
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Erreur lors du traitement de l\'image:', err);
+    } finally {
+      setIsImageLoading(false);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // handleStreamingToggle
+  // ─────────────────────────────────────────────────────────────────────────────
+  function handleStreamingToggle() {
+    const newVal = !streamingEnabled;
+    setStreamingEnabled(newVal);
+    if (!currentChat) {
+      setError('Aucune conversation sélectionnée');
+      return;
+    }
+    updateChat(currentChat.id, { streamingEnabled: newVal });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // handleSubmit => envoi
+  // ─────────────────────────────────────────────────────────────────────────────
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!input.trim() && selectedImages.length === 0) return;
+    if (isLoading) return;
+
+    if (!currentChat) {
+      setError('Aucune conversation sélectionnée');
+      return;
+    }
+    const apiKey = apiKeys[currentChat.model.id];
+    if (!apiKey) {
+      setError(`Veuillez entrer une clé API pour ${currentChat.model.name}`);
+      return;
+    }
+    setError(null);
+
+    // Préparer le message en intégrant les descriptions d'images
+    const userTyped = input.trim();
+    let msgForAI = userTyped;
+    for (const img of localImages) {
+      const mention = '@' + img.name;
+      if (msgForAI.includes(mention)) {
+        msgForAI = msgForAI.replace(mention, mention + ` (${img.description})`);
+      }
+    }
+    setInput('');
+    setSelectedImages([]);
+
+    // Si hors ligne, on ajoute immédiatement le message avec le flag offline
+    if (!navigator.onLine) {
+      const offlineId = crypto.randomUUID();
+      // Ajout du message avec offline=true (sans modifier le contenu)
+      addMessage(currentChat.id, 'user', msgForAI, undefined, offlineId, true);
+      // Stocker dans IndexedDB pour la synchronisation ultérieure
+      await storePendingMessage({
+        id: offlineId,
+        chatId: currentChat.id,
+        content: msgForAI,
+        timestamp: Date.now()
+      });
+      // Demander la background sync
+      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        const reg = await navigator.serviceWorker.ready;
+        await (reg as any).sync.register('sync-messages');
+      }
+      // Notifier une seule fois (stockage dans localStorage pour éviter les doublons)
+      if (Notification.permission === "granted" && !localStorage.getItem('offlineSyncNotified')) {
+        new Notification("Vous êtes hors ligne. Vos messages seront synchronisés dès le retour de connexion.");
+        localStorage.setItem('offlineSyncNotified', 'true');
+      }
+      return;
+    }
+
+    // Si en ligne, envoyer le message normalement (il est affiché dès la saisie)
+    addMessage(currentChat.id, 'user', userTyped);
+    setIsLoading(true);
+    setCurrentResponse('');
+
+    try {
+      // Préparation du message système et de l'historique
+      const systemBase = `Tu es un assistant IA. Réponds brièvement. L'utilisateur peut t'envoyer des images en mentionnant leur nom, exemple "@image.png". Tu peux voir l'image grâce à la description qui se trouve automatiquement entre parenthèses après la mention de l'image en question.\n`;
+      const fullSystem = systemPrompt ? systemBase + "\n" + systemPrompt : systemBase;
+      const systemMsg = { role: 'system' as const, content: fullSystem };
+
+      const visibleHistory = currentChat.messages.filter(m => m.role !== 'system');
+      const lastMessages = visibleHistory.slice(-historySize);
+
+      const finalMessages = [
+        systemMsg,
+        ...lastMessages.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: msgForAI }
+      ];
+
+      if (streamingEnabled && currentChat.model.supportsStreaming) {
+        const finalToolCalls: Record<number, { name: string; arguments: string }> = {};
+        const streamGen = streamResponse(currentChat.model, apiKey, finalMessages, finalToolCalls);
+        let accum = '';
+        for await (const chunk of streamGen) {
+          accum += chunk;
+          setCurrentResponse(accum);
+        }
+        const addRes = await handleFunctionCallsAndRespond(
+          currentChat.model,
+          apiKey,
+          [...finalMessages, { role: 'assistant', content: accum }],
+          finalToolCalls
+        );
+        let finalAnswer = accum.trim();
+        if (addRes.trim()) finalAnswer += '\n\n' + addRes.trim();
+
+        if (finalAnswer) {
+          addMessage(currentChat.id, 'assistant', finalAnswer);
+        }
+      } else {
+        const resp = await sendMessage(
+          currentChat.model,
+          apiKey,
+          finalMessages,
+          currentChat.images,
+          false
+        );
+        addMessage(currentChat.id, 'assistant', resp);
+      }
+    } catch (err: any) {
+      const msg = err.message || 'Une erreur est survenue';
+      setError(msg);
+      addMessage(currentChat.id, 'assistant', `⚠️ ${msg}`);
+    } finally {
+      setIsLoading(false);
+      setCurrentResponse('');
+    }
+  }
+
+
+
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Édition
+  // ─────────────────────────────────────────────────────────────────────────────
+  function handleEdit(msg: any) {
+    setEditingContent(msg.content);
+    if (!currentChat) {
+      setError('Aucune conversation sélectionnée');
+      return;
+    }
+    setMessageEditing(currentChat.id, msg.id, true);
+  }
+  async function handleSaveEdit(msgId: string) {
+    // 1. Mettre à jour le contenu du message et sortir du mode édition
+    if (!currentChat) {
+      setError('Aucune conversation sélectionnée');
+      return;
+    }
+    updateMessage(currentChat.id, msgId, editingContent);
+    setMessageEditing(currentChat.id, msgId, false);
+
+    // 2. Réacquérir l'état mis à jour du chat depuis le store
+    const updatedChat = useStore.getState().chats.find(chat => chat.id === currentChat.id);
+    if (!updatedChat) return;
+
+    // 3. Trouver l'index du message modifié dans l'état actualisé
+    const index = updatedChat.messages.findIndex(m => m.id === msgId);
+    if (index === -1) return;
+
+    // 4. Tronquer les messages postérieurs au message modifié
+    const trimmedMessages = updatedChat.messages.slice(0, index + 1);
+    updateChat(updatedChat.id, { messages: trimmedMessages });
+
+    // 5. Réinitialiser l'état local d'édition si nécessaire
+    setEditingContent('');
+
+    // 6. Générer une nouvelle réponse de l'IA basée sur le message modifié
+    await generateResponseForLastUser();
+  }
+
+
+  function handleCancelEdit(msgId: string) {
+    if (!currentChat) {
+      setError('Aucune conversation sélectionnée');
+      return;
+    }
+    setMessageEditing(currentChat.id, msgId, false);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Regenerate
+  // ─────────────────────────────────────────────────────────────────────────────
+  async function regenerateMessage(assistantMsgId: string) {
+    if (!currentChat) {
+      setError('Aucune conversation sélectionnée');
+      return;
+    }
+    const idx = currentChat.messages.findIndex(m => m.id === assistantMsgId);
+    if (idx === -1) return;
+
+    // Vider le contenu du message existant avant régénération
+    updateMessage(currentChat.id, assistantMsgId, '');
+
+    // Trouver l'index du message utilisateur précédent
+    const userIdx = idx - 1;
+    if (userIdx < 0 || currentChat.messages[userIdx].role !== 'user') return;
+
+    const userMsg = currentChat.messages[userIdx].content;
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const apiKey = apiKeys[currentChat.model.id];
+      if (!apiKey) {
+        setError(`Veuillez entrer une clé API pour ${currentChat.model.name}`);
+        return;
+      }
+
+      // Construction du message système
+      const systemBase = "Tu es Georges, un assistant IA. Réponds brièvement.\n";
+      const fullSystem = systemPrompt ? systemBase + "\n" + systemPrompt : systemBase;
+      const systemMsg = { role: 'system' as const, content: fullSystem };
+
+      // Préparation de l'historique et récupération des X derniers messages
+      const visibleHistory = currentChat.messages.filter(m => m.role !== 'system');
+      const lastMessages = visibleHistory.slice(0, idx).slice(-historySize);
+
+      // Intégration des descriptions d'images dans le message utilisateur si nécessaire
+      let userForAI = userMsg;
+      for (const img of localImages) {
+        const mention = '@' + img.name;
+        if (userForAI.includes(mention)) {
+          userForAI = userForAI.replace(mention, mention + ` (${img.description})`);
+        }
+      }
+
+      const finalMessages = [
+        systemMsg,
+        ...lastMessages.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: userForAI }
+      ];
+
+      if (streamingEnabled && currentChat.model.supportsStreaming) {
+        const finalToolCalls: Record<number, { name: string; arguments: string }> = {};
+        const streamGen = streamResponse(currentChat.model, apiKey, finalMessages, finalToolCalls);
+
+        let accum = '';
+        for await (const chunk of streamGen) {
+          accum += chunk;
+          // Mise à jour directe du message existant pendant le streaming
+          updateMessage(currentChat.id, assistantMsgId, accum);
+        }
+
+        const addRes = await handleFunctionCallsAndRespond(
+          currentChat.model,
+          apiKey,
+          [...finalMessages, { role: 'assistant', content: accum }],
+          finalToolCalls
+        );
+
+        let finalAnswer = accum.trim();
+        if (addRes.trim()) finalAnswer += '\n\n' + addRes.trim();
+
+        if (finalAnswer) {
+          // Mise à jour finale du message avec la réponse complète
+          updateMessage(currentChat.id, assistantMsgId, finalAnswer);
+        }
+      } else {
+        const resp = await sendMessage(
+          currentChat.model,
+          apiKey,
+          finalMessages,
+          currentChat.images,
+          false
+        );
+        updateMessage(currentChat.id, assistantMsgId, resp);
+      }
+    } catch (err: any) {
+      const msg = err.message || 'Une erreur est survenue';
+      setError(msg);
+      updateMessage(currentChat.id, assistantMsgId, `⚠️ ${msg}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function generateResponseForLastUser() {
+    // Rechercher le chat actuel directement depuis le store pour obtenir la version mise à jour
+    const updatedChat = useStore.getState().chats.find(chat => chat.id === currentChatId);
+    if (!updatedChat) return;
+
+    const lastMsg = updatedChat.messages[updatedChat.messages.length - 1];
+    if (!lastMsg || lastMsg.role !== 'user') return;
+
+    const apiKey = apiKeys[updatedChat.model.id];
+    if (!apiKey) {
+      setError(`Veuillez entrer une clé API pour ${updatedChat.model.name}`);
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+    setCurrentResponse('');
+
+    // Construction du message système et préparation de l’historique
+    const systemBase = "Tu es Georges, un assistant IA. Réponds brièvement.\n";
+    const fullSystem = systemPrompt ? systemBase + "\n" + systemPrompt : systemBase;
+    const systemMsg = { role: 'system' as const, content: fullSystem };
+
+    // Utiliser updatedChat pour construire l'historique
+    const visibleHistory = updatedChat.messages.filter(m => m.role !== 'system');
+    const lastMessages = visibleHistory.slice(-historySize);
+
+    // Préparation du message utilisateur pour l’IA (intégration des descriptions d’images si nécessaire)
+    let msgForAI = lastMsg.content;
+    for (const img of localImages) {
+      const mention = '@' + img.name;
+      if (msgForAI.includes(mention)) {
+        msgForAI = msgForAI.replace(mention, mention + ` (${img.description})`);
+      }
+    }
+
+    const finalMessages = [
+      systemMsg,
+      ...lastMessages.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user' as const, content: msgForAI }
+    ];
+
+    try {
+      if (streamingEnabled && updatedChat.model.supportsStreaming) {
+        const finalToolCalls: Record<number, { name: string; arguments: string }> = {};
+        const streamGen = streamResponse(updatedChat.model, apiKey, finalMessages, finalToolCalls);
+
+        let accum = '';
+        for await (const chunk of streamGen) {
+          accum += chunk;
+          setCurrentResponse(accum);
+        }
+
+        const addRes = await handleFunctionCallsAndRespond(
+          updatedChat.model,
+          apiKey,
+          [...finalMessages, { role: 'assistant', content: accum }],
+          finalToolCalls
+        );
+
+        let finalAnswer = accum.trim();
+        if (addRes.trim()) finalAnswer += '\n\n' + addRes.trim();
+
+        if (finalAnswer) {
+          addMessage(updatedChat.id, 'assistant', finalAnswer);
+        }
+      } else {
+        const resp = await sendMessage(updatedChat.model, apiKey, finalMessages, updatedChat.images, false);
+        addMessage(updatedChat.id, 'assistant', resp);
+      }
+    } catch (err: any) {
+      const msg = err.message || 'Une erreur est survenue';
+      setError(msg);
+      addMessage(updatedChat.id, 'assistant', `⚠️ ${msg}`);
+    } finally {
+      setIsLoading(false);
+      setCurrentResponse('');
+    }
+  }
+
+
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // handleInputKeyDown + handleInputChange
+  // ─────────────────────────────────────────────────────────────────────────────
+  function handleInputKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.stopPropagation();
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      if (showImageSuggestions) {
+        e.preventDefault();
+        const arr = getFilteredImages();
+        if (arr.length > 0) {
+          insertImageMention(arr[0]);
+        }
+        return;
+      }
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  }
+  function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value;
+    const pos = e.target.selectionStart || 0;
+    setInput(val);
+    setCursorPosition(pos);
+
+    // auto-resize
+    e.currentTarget.style.height = 'auto';
+    const maxHeight = 200;
+    e.currentTarget.style.height = Math.min(e.currentTarget.scrollHeight, maxHeight) + 'px';
+    if (e.currentTarget.scrollHeight > maxHeight) {
+      e.currentTarget.style.overflowY = 'auto';
+    } else {
+      e.currentTarget.style.overflowY = 'hidden';
+    }
+
+    // suggestions
+    const textBefore = val.substring(0, pos);
+    const lastAt = textBefore.lastIndexOf('@');
+    if (lastAt !== -1 && !textBefore.includes(' ', lastAt)) {
+      const term = textBefore.substring(lastAt + 1).toLowerCase();
+      const found = localImages.some(i => i.name.toLowerCase().includes(term));
+      setShowImageSuggestions(found);
+    } else {
+      setShowImageSuggestions(false);
+    }
+  }
+
+  // Mentions
+  function insertImageMention(img: ChatImage) {
+    if (!textareaRef.current) return;
+    const text = textareaRef.current.value;
+    const lastAtSymbol = text.lastIndexOf('@');
+    if (lastAtSymbol !== -1) {
+      const before = text.substring(0, lastAtSymbol);
+      const after = text.substring(lastAtSymbol);
+      const spaceIndex = after.indexOf(' ');
+      const newText = before + `@${img.name}` + (spaceIndex >= 0 ? after.substring(spaceIndex) : '');
+      setInput(newText);
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    } else {
+      setInput(text + `@${img.name}`);
+    }
+    setSelectedImages(prev => {
+      if (!prev.find(i => i.id === img.id)) {
+        return [...prev, img];
+      }
+      return prev;
+    });
+    setShowImageSuggestions(false);
+  }
+
+  function getFilteredImages() {
+    const txt = input.substring(0, cursorPosition);
+    const lastAt = txt.lastIndexOf('@');
+    if (lastAt === -1) return localImages;
+    const searchTerm = txt.substring(lastAt + 1).toLowerCase();
+    return localImages.filter(i => i.name.toLowerCase().includes(searchTerm));
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Drag & drop
+  // ─────────────────────────────────────────────────────────────────────────────
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const items = Array.from(e.dataTransfer.items);
+    const files = items
+      .filter(i => i.kind === 'file')
+      .map(i => i.getAsFile())
+      .filter((f): f is File => f !== null);
+    for (const file of files) {
+      await processImage(file);
+    }
+  }
+
+  // handleModelChange
+  function handleModelChange(model: AIModel) {
+    if (!currentChat) {
+      setError('Aucune conversation sélectionnée');
+      return;
+    }
+    updateChat(currentChat.id, { model });
+    setIsModelDropdownOpen(false);
+  }
+
+  // Handle history size
+  function handleHistorySizeChange(size: number) {
+    setHistorySize(size);
+    setIsHistoryDropdownOpen(false);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Rendu
+  // ─────────────────────────────────────────────────────────────────────────────
+  return (
+    <div
+      ref={chatContainerRef}
+      className="flex flex-col h-full bg-gray-800 relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Barre d'en-tête */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+        <h1 className="text-xl font-semibold text-white">{currentChat.title}</h1>
+
+        <div className="flex items-center gap-4 relative">
+          {/* Switch streaming */}
+          {currentChat.model.id === 'gpt' && (
+            <button
+              onClick={handleStreamingToggle}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-700 
+                         hover:bg-gray-600 rounded-lg text-sm text-white transition-colors"
+              title={streamingEnabled ? 'Désactiver le streaming' : 'Activer le streaming'}
+            >
+              {streamingEnabled ? (
+                <ToggleRight size={16} className="text-blue-500" />
+              ) : (
+                <ToggleLeft size={16} />
+              )}
+              <span>Streaming</span>
+            </button>
+
+          )}
+
+          {/* Choix du modèle */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-700 
+                         hover:bg-gray-600 rounded-lg text-sm text-white transition-colors"
+            >
+              <span>{currentChat.model.name}</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-400 transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''
+                  }`}
+              />
+            </button>
+            {isModelDropdownOpen && (
+              <div
+                className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-lg shadow-lg
+                           border border-gray-600 py-1 z-50"
+              >
+                {AI_MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => handleModelChange(m)}
+                    className={`w-full px-4 py-2 text-left hover:bg-gray-600 transition-colors ${currentChat.model.id === m.id ? 'bg-gray-600 text-white' : 'text-gray-200'
+                      }`}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+
+          {/* Choix de la taille d'historique */}
+          <div className="relative" ref={historyDropdownRef}>
+            <button
+              onClick={() => setIsHistoryDropdownOpen(!isHistoryDropdownOpen)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-700 
+                         hover:bg-gray-600 rounded-lg text-sm text-white transition-colors"
+              title="Nombre de messages de l'historique"
+            >
+              <span>Hist: {historySize}</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-400 transition-transform ${isHistoryDropdownOpen ? 'rotate-180' : ''
+                  }`}
+              />
+            </button>
+            {isHistoryDropdownOpen && (
+              <div
+                className="absolute right-0 mt-2 w-20 bg-gray-700 rounded-lg shadow-lg
+                           border border-gray-600 py-1 z-50 max-h-48 overflow-y-auto"
+              >
+                {[...Array(29)].map((_, i) => i + 2).map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => handleHistorySizeChange(num)}
+                    className={`w-full px-4 py-1 text-left hover:bg-gray-600 transition-colors ${historySize === num ? 'bg-gray-600 text-white' : 'text-gray-200'
+                      }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Overlay drag & drop */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-blue-500/10 border-2 border-blue-500 border-dashed
+                       rounded-lg flex items-center justify-center z-50"
+        >
+          <div className="text-blue-500 text-lg font-medium">
+            Déposez votre image ici
+          </div>
+        </div>
+      )}
+
+      {/* Overlay chargement d'image */}
+      {isImageLoading && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-4 flex items-center gap-3">
+            <Loader className="animate-spin text-blue-500" size={24} />
+            <span className="text-white">Analyse de l'image en cours...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Erreur */}
+      {error && (
+        <div className="m-4 bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Liste de messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {currentChat.messages.map((message, idx) => {
+          // On ignore role=system visuellement
+          if (message.role === 'system') return null;
+
+          const isLastAssistant = (message.role === 'assistant') && (idx === currentChat.messages.length - 1);
+          const senderName = (message.role === 'user') ? 'Vous' : currentChat.model.name;
+
+          // On convertit en HTML
+          const html = toHtml(message.content);
+          // Images mentionnées
+          const mentionImages = getMentionedImages(message.content);
+
+          return (
+            <div
+              key={message.id}
+              className={`group max-w-2xl ${message.role === 'user' ? 'ml-auto' : 'mr-auto'}`}
+            >
+              <div
+                className={`
+                  rounded-lg p-4 relative
+                  ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'}
+                `}
+                style={{ paddingTop: '3rem' }}
+              >
+                {/* Nom + actions */}
+                <div className="absolute top-2 left-2 flex items-center gap-2">
+                  <span className="font-bold text-sm text-gray-100">{senderName}</span>
+                  {message.role === 'user' && message.offline && (
+                    <span className="text-red-500" title="Message non synchronisé">&#x26A0;</span>
+                  )}
+                </div>
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                  <button
+                    onClick={() => handleEdit(message)}
+                    className="text-gray-300 hover:text-white transition-colors"
+                    title="Éditer ce message"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  {isLastAssistant && message.role === 'assistant' && (
+                    <button
+                      onClick={() => regenerateMessage(message.id)}
+                      className="text-gray-300 hover:text-white transition-colors"
+                      title="Regénérer ce message"
+                    >
+                      <RotateCw size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {message.isEditing ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editingContent}
+                      onChange={e => setEditingContent(e.target.value)}
+                      className="w-full bg-gray-800 text-white rounded p-2 min-h-[100px]"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleSaveEdit(message.id)}
+                        className="text-green-500 hover:text-green-400"
+                      >
+                        <Check size={20} />
+                      </button>
+                      <button
+                        onClick={() => handleCancelEdit(message.id)}
+                        className="text-red-500 hover:text-red-400"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: html }}
+                    className="prose prose-invert max-w-none"
+                  />
+                )}
+              </div>
+
+              {/* Miniatures d'images mentionnées */}
+              {mentionImages.length > 0 && (
+                <div className={`flex gap-2 mt-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                  {mentionImages.map(img => (
+                    <div key={img.id} className="w-12 h-12 rounded-lg overflow-hidden">
+                      <img
+                        src={img.base64}
+                        alt={img.description}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Affichage streaming */}
+        {isLoading && currentResponse && (
+          <div className="group max-w-2xl mr-auto">
+            <div className="rounded-lg p-4 bg-gray-700 text-white">
+              {currentResponse}
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Galerie images en bas */}
+      {localImages.length > 0 && (
+        <div className="p-2 border-t border-gray-700 bg-gray-850">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700">
+            {localImages.map((img) => (
+              <div
+                key={img.id}
+                className={`
+                  flex-shrink-0 group relative w-12 h-12 rounded-lg overflow-hidden
+                  ${selectedImages.find(i => i.id === img.id) ? 'ring-2 ring-blue-500' : ''}
+                `}
+              >
+                <div
+                  onClick={() => insertImageMention(img)}
+                  className="w-full h-full cursor-pointer"
+                  title={img.description}
+                >
+                  <img
+                    src={img.base64}
+                    alt={img.description}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    deleteImageFromChat(currentChat.id, img.id);
+                    setLocalImages(prev => prev.filter(i => i.id !== img.id));
+                    setSelectedImages(prev => prev.filter(i => i.id !== img.id));
+                  }}
+                  className="absolute top-0.5 right-0.5 p-0.5 bg-red-500
+                             text-white rounded-full transition-opacity"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Formulaire de saisie */}
+      <form onSubmit={handleSubmit} className="relative p-4 border-t border-gray-700">
+        {showImageSuggestions && (
+          <div
+            ref={suggestionRef}
+            className="absolute bottom-full mb-2 w-full bg-gray-800
+                       rounded-lg border border-gray-700 shadow-lg
+                       max-h-48 overflow-y-auto"
+          >
+            {getFilteredImages().map(img => (
+              <div
+                key={img.id}
+                onClick={() => insertImageMention(img)}
+                className="flex items-center gap-2 p-2 hover:bg-gray-700 cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                  <img
+                    src={img.base64}
+                    alt={img.description}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm text-white font-medium">{img.name}</span>
+                  <span className="text-xs text-gray-400 truncate">{img.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-4">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleInputKeyDown}
+            placeholder="Écrivez votre message... (Shift+Entrée pour une nouvelle ligne, Entrée pour envoyer)"
+            className="flex-1 bg-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{
+              minHeight: '50px',
+              maxHeight: '200px',
+              resize: 'vertical',
+              overflowY: 'hidden'
+            }}
+            rows={1}
+            disabled={isLoading}
+          />
+          {webcamSupported ? (
+            <button
+              type="button"
+              onClick={() => setIsWebcamOpen(true)}
+              className="bg-gray-700 text-white rounded-lg px-4 py-3 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Prendre une photo avec la webcam"
+            >
+              <Camera size={20} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="bg-gray-500 text-gray-300 rounded-lg px-4 py-3 cursor-not-allowed"
+              title="Votre navigateur ne supporte pas la webcam"
+            >
+              <Camera size={20} />
+            </button>
+          )}
+
+          {/* Bouton Carte */}
+          {geolocationSupported ? (
+            <button
+              type="button"
+              onClick={() => setIsMapOpen(true)}
+              className="bg-gray-700 text-white rounded-lg px-4 py-3 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Ouvrir la carte"
+            >
+              <MapPin size={20} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="bg-gray-500 text-gray-300 rounded-lg px-4 py-3 cursor-not-allowed"
+              title="La géolocalisation n'est pas supportée sur ce navigateur"
+            >
+              <MapPin size={20} />
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={isLoading || (!input.trim() && selectedImages.length === 0)}
+            className="bg-blue-600 text-white rounded-lg px-6 py-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600"
+          >
+            <Send size={20} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </form>
+      {isWebcamOpen && (
+        <WebcamCapture
+          onCapture={(file: File) => {
+            processImage(file).then(() => {
+              triggerNotification("Photo prise avec la webcam");
+            });
+          }}
+          onClose={() => setIsWebcamOpen(false)}
+        />
+      )}
+      {isMapOpen && (
+        <MapCapture
+          onCapture={(file: File) => {
+            processImage(file).then(() => {
+              triggerNotification("Photo prise depuis la carte");
+            });
+          }}
+          onClose={() => setIsMapOpen(false)}
+        />
+      )}
+
+
+    </div>
+  );
+}
+```
+
+src\components\Editor.tsx:
+```
+import { Editor as MonacoEditor } from '@monaco-editor/react';
+
+interface EditorProps {
+  value: string;
+  language: string;
+  onChange: (value: string) => void;
+}
+
+export function Editor({ value, language, onChange }: EditorProps) {
+  return (
+    <MonacoEditor
+      height="100%"
+      language={language}
+      value={value}
+      onChange={(value) => onChange(value || '')}
+      theme="vs-dark"
+      options={{
+        minimap: { enabled: true },
+        fontSize: 14,
+        wordWrap: 'on',
+        automaticLayout: true,
+        tabSize: 2,
+        scrollBeyondLastLine: false,
+        renderWhitespace: 'selection',
+        formatOnPaste: true,
+        formatOnType: true
+      }}
+    />
+  );
+}
+```
+
+src\components\EmojiPicker.tsx:
+```
+import { X } from 'lucide-react';
+
+const EMOJI_CATEGORIES = {
+  'Récents': ['💬', '🤖', '💡', '📝', '🎯', '🔍', '📚', '💻'],
+  'Visages': ['😊', '🤔', '🤓', '🧐', '🤖', '👾', '🤯', '🥳'],
+  'Objets': ['💡', '📝', '📚', '💻', '🔍', '🎯', '🎨', '🎮'],
+  'Symboles': ['✨', '💫', '🌟', '⭐', '💭', '🗨️', '💬', '🔆']
+};
+
+interface EmojiPickerProps {
+  onSelect: (emoji: string) => void;
+  onClose: () => void;
+}
+
+export function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
+  return (
+    <div className="absolute left-0 top-0 z-50 bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4 w-64">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-gray-200">Choisir un émoji</h3>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
+          <div key={category}>
+            <h4 className="text-xs font-medium text-gray-400 mb-2">{category}</h4>
+            <div className="grid grid-cols-8 gap-1">
+              {emojis.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => {
+                    onSelect(emoji);
+                    onClose();
+                  }}
+                  className="w-6 h-6 flex items-center justify-center hover:bg-gray-700 rounded transition-colors"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+src\components\FileContextMenu.tsx:
+```
+import { File, FolderOpen, Edit2, Trash2 } from 'lucide-react';
+
+interface FileContextMenuProps {
+  path: string;
+  isDirectory: boolean;
+  onCreateFile: (path: string) => void;
+  onCreateDirectory: (path: string) => void;
+  onRename: (path: string) => void;
+  onDelete: (path: string) => void;
+  onMove: (oldPath: string, newPath: string) => void;  // Ajout de cette ligne
+  onCopy: (sourcePath: string, destPath: string) => void;  // Ajout de cette ligne
+  position: { x: number; y: number };
+}
+
+
+export function FileContextMenu({
+  path,
+  isDirectory,
+  onCreateFile,
+  onCreateDirectory,
+  onRename,
+  onDelete,
+  position
+}: FileContextMenuProps) {
+  return (
+    <div
+      className="fixed z-50 w-56 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-1"
+      style={{ top: position.y, left: position.x }}
+    >
+      {isDirectory && (
+        <>
+          <button
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+            onClick={() => onCreateFile(`${path}/nouveau-fichier.txt`)}
+          >
+            <File size={16} className="mr-2" />
+            Nouveau fichier
+          </button>
+          <button
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+            onClick={() => onCreateDirectory(`${path}/nouveau-dossier`)}
+          >
+            <FolderOpen size={16} className="mr-2" />
+            Nouveau dossier
+          </button>
+          <div className="border-t border-gray-700 my-1" />
+        </>
+      )}
+      <button
+        className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+        onClick={() => onRename(path)}
+      >
+        <Edit2 size={16} className="mr-2" />
+        Renommer
+      </button>
+      <button
+        className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
+        onClick={() => onDelete(path)}
+      >
+        <Trash2 size={16} className="mr-2" />
+        Supprimer
+      </button>
+    </div>
+  );
+}
+```
+
+src\components\FileTree.tsx:
+```
+import { useState, useEffect, useRef } from 'react';
+import { File, FolderOpen, ChevronRight, Search } from 'lucide-react';
+import { FileContextMenu } from './FileContextMenu';
+
+interface FileTreeProps {
+  tree: any;
+  basePath?: string;
+  onFileSelect: (path: string) => void;
+  onCreateFile: (path: string) => void;
+  onCreateDirectory: (path: string) => void;
+  onRename: (path: string) => void;
+  onDelete: (path: string) => void;
+  onMove: (oldPath: string, newPath: string) => void;
+  onCopy: (sourcePath: string, destPath: string) => void;
+  expandedFolders: Set<string>;
+  onToggleFolder: (path: string) => void;
+  rootDirectory?: string;
+  fileStats?: Record<string, { size: number; lastModified: number; type: string }>;
+  onSearch?: (query: string) => void;
+  searchResults?: string[];
+  selectedFiles: Set<string>;
+  onFileSelectionChange: (path: string, selected: boolean, isDirectory?: boolean) => void;
+}
+
+export function FileTree({
+  tree,
+  basePath = '',
+  onFileSelect,
+  onCreateFile,
+  onCreateDirectory,
+  onRename,
+  onDelete,
+  onMove,
+  onCopy,
+  expandedFolders,
+  onToggleFolder,
+  rootDirectory,
+  onSearch,
+  searchResults,
+  selectedFiles,
+  onFileSelectionChange
+}: FileTreeProps) {
+  const [contextMenu, setContextMenu] = useState<{
+    path: string;
+    isDirectory: boolean;
+    position: { x: number; y: number };
+  } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleContextMenu = (e: React.MouseEvent, path: string, isDirectory: boolean) => {
+    e.preventDefault();
+    setContextMenu({
+      path,
+      isDirectory,
+      position: { x: e.clientX, y: e.clientY }
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, path: string) => {
+    setDraggedItem(path);
+    setIsDragging(true);
+    e.dataTransfer.setData('text/plain', path);
+    e.dataTransfer.effectAllowed = 'copyMove';
+  };
+
+  const handleDragOver = (e: React.DragEvent, path: string) => {
+    e.preventDefault();
+    setDropTarget(path);
+    e.dataTransfer.dropEffect = e.ctrlKey || e.metaKey ? 'copy' : 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetPath: string) => {
+    e.preventDefault();
+    setIsDragging(false);
+    setDropTarget(null);
+
+    if (!draggedItem) return;
+
+    const sourcePath = draggedItem;
+    if (sourcePath === targetPath) return;
+
+    if (e.ctrlKey || e.metaKey) {
+      await onCopy(sourcePath, `${targetPath}/${sourcePath.split('/').pop()}`);
+    } else {
+      await onMove(sourcePath, `${targetPath}/${sourcePath.split('/').pop()}`);
+    }
+
+    setDraggedItem(null);
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    onSearch?.(query);
+  };
+
+  const renderFileEntry = (name: string, path: string) => (
+    <div
+      key={path}
+      className={`group flex items-center px-2 py-1.5 hover:bg-gray-800/50 rounded-md cursor-pointer transition-colors ${
+        dropTarget === path ? 'bg-blue-500/10 border border-blue-500/50' : ''
+      }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onFileSelect(path);
+      }}
+      onContextMenu={(e) => handleContextMenu(e, path, false)}
+      draggable
+      onDragStart={(e) => handleDragStart(e, path)}
+      onDragOver={(e) => handleDragOver(e, path)}
+      onDrop={(e) => handleDrop(e, path)}
+    >
+      <input
+        type="checkbox"
+        className="mr-2 h-3 w-3 rounded border-gray-500 text-blue-500 focus:ring-blue-500/50"
+        checked={selectedFiles.has(path)}
+        onChange={(e) => {
+          e.stopPropagation();
+          onFileSelectionChange(path, e.target.checked, false);
+        }}
+        onClick={(e) => e.stopPropagation()}
+      />
+      <File size={14} className="text-gray-400 flex-shrink-0 mr-2" />
+      <span className="truncate text-xs text-gray-200">{name}</span>
+    </div>
+  );
+
+  const renderFolderContent = (content: any, path: string) => (
+    <div className="ml-4 space-y-0.5">
+      {Object.entries(content).map(([childName, childValue]) => {
+        const childPath = `${path}/${childName}`;
+        const isDirectory = typeof childValue === 'object';
+        const isChildExpanded = expandedFolders.has(childPath);
+
+        return isDirectory
+          ? renderFolderEntry(childName, childPath, childValue, isChildExpanded)
+          : renderFileEntry(childName, childPath);
+      })}
+    </div>
+  );
+
+  const renderFolderEntry = (name: string, path: string, content: any, isExpanded: boolean) => (
+    <div key={path} className="space-y-0.5">
+      <div
+        className={`group flex items-center px-2 py-1.5 hover:bg-gray-800/50 rounded-md cursor-pointer transition-colors ${
+          dropTarget === path ? 'bg-blue-500/10 border border-blue-500/50' : ''
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleFolder(path);
+        }}
+        onContextMenu={(e) => handleContextMenu(e, path, true)}
+        draggable
+        onDragStart={(e) => handleDragStart(e, path)}
+        onDragOver={(e) => handleDragOver(e, path)}
+        onDrop={(e) => handleDrop(e, path)}
+      >
+        <input
+          type="checkbox"
+          className="mr-2 h-3 w-3 rounded border-gray-500 text-blue-500 focus:ring-blue-500/50"
+          checked={selectedFiles.has(path)}
+          onChange={(e) => {
+            e.stopPropagation();
+            onFileSelectionChange(path, e.target.checked, true);
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
+        <ChevronRight
+          size={14}
+          className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''} mr-1`}
+        />
+        <FolderOpen size={14} className="text-yellow-500 mr-2" />
+        <span className="truncate text-xs text-gray-200">{name}</span>
+      </div>
+      {isExpanded && renderFolderContent(content, path)}
+    </div>
+  );
+
+  return (
+    <div className="h-full flex flex-col bg-gray-900" ref={treeRef}>
+      {/* Barre de recherche */}
+      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-sm border-b border-gray-700/50 p-3">
+        <div className="relative">
+          <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Rechercher... (Ctrl+F)"
+            className="w-full bg-gray-800/50 text-white rounded-md pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+          />
+        </div>
+      </div>
+
+      {/* Titre du dossier racine */}
+      {rootDirectory && (
+        <div className="px-3 pt-3">
+          <h2 className="text-sm font-medium text-gray-300">{rootDirectory}</h2>
+        </div>
+      )}
+      
+      {/* Liste des fichiers */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
+        {searchQuery ? (
+          searchResults && searchResults.length > 0 ? (
+            <div className="space-y-0.5">
+              {searchResults.map((path) => {
+                const name = path.split('/').pop() || '';
+                return renderFileEntry(name, path);
+              })}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-32 text-xs text-gray-400">
+              Aucun résultat pour "{searchQuery}"
+            </div>
+          )
+        ) : rootDirectory ? (
+          <div className="space-y-0.5">
+            {renderFolderContent(tree, rootDirectory)}
+          </div>
+        ) : (
+          Object.entries(tree).map(([name, value]) => {
+            const path = name;
+            const isDirectory = typeof value === 'object';
+            const isExpanded = expandedFolders.has(path);
+
+            return isDirectory
+              ? renderFolderEntry(name, path, value, isExpanded)
+              : renderFileEntry(name, path);
+          })
+        )}
+      </div>
+
+      {/* Menu contextuel */}
+      {contextMenu && (
+        <FileContextMenu
+          path={contextMenu.path}
+          isDirectory={contextMenu.isDirectory}
+          onCreateFile={onCreateFile}
+          onCreateDirectory={onCreateDirectory}
+          onRename={onRename}
+          onDelete={onDelete}
+          onMove={onMove}
+          onCopy={onCopy}
+          position={contextMenu.position}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+src\components\ImageGallery.tsx:
+```
+import React from 'react';
+import { X } from 'lucide-react';
+import { ChatImage } from '../types';
+
+interface ImageGalleryProps {
+  images: ChatImage[];
+  selectedImages?: string[];
+  onImageSelect?: (imageId: string) => void;
+  onImageDelete?: (imageId: string) => void;
+  isSelectable?: boolean;
+}
+
+export function ImageGallery({
+  images,
+  selectedImages = [],
+  onImageSelect,
+  onImageDelete,
+  isSelectable = false
+}: ImageGalleryProps) {
+  const handleImageClick = (imageId: string) => {
+    if (isSelectable && onImageSelect) {
+      onImageSelect(imageId);
+      const textArea = document.querySelector('textarea, input[type="text"]') as HTMLTextAreaElement | HTMLInputElement | null;
+      if (textArea) {
+        const imageRef = `[Image ${imageId}]`;
+        const cursorPos = textArea.selectionStart || 0;
+        const textBefore = textArea.value.substring(0, cursorPos);
+        const textAfter = textArea.value.substring(cursorPos);
+        textArea.value = textBefore + imageRef + textAfter;
+        textArea.focus();
+        textArea.selectionStart = textArea.selectionEnd = cursorPos + imageRef.length;
+      }
+    }
+  };
+
+  if (images.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      {images.map((image) => (
+        <div
+          key={image.id}
+          className={`relative group ${
+            isSelectable ? 'cursor-pointer' : ''
+          } ${
+            selectedImages.includes(image.id)
+              ? 'ring-2 ring-blue-500'
+              : ''
+          }`}
+          onClick={() => handleImageClick(image.id)}
+        >
+          <div className="aspect-square relative overflow-hidden rounded-lg">
+            <img
+              src={image.base64}
+              alt={image.description}
+              className="object-cover w-full h-full"
+            />
+            {onImageDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onImageDelete(image.id);
+                }}
+                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <div className="mt-2 text-sm text-gray-300 line-clamp-2">
+            {image.description}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+src\components\ImageUploader.tsx:
+```
+import React from 'react';
+import { Upload, X } from 'lucide-react';
+import { generateImageDescription } from '../services/ai';
+
+interface ImageUploaderProps {
+  onImageUpload: (image: { base64: string; description: string; name: string }) => void;
+  apiKey: string;
+}
+
+export function ImageUploader({ onImageUpload, apiKey }: ImageUploaderProps) {
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const processImage = async (file: File) => {
+    try {
+      setIsUploading(true);
+      setError(null);
+
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Le fichier doit être une image');
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('L\'image ne doit pas dépasser 5MB');
+      }
+
+      // Convertir l'image en base64
+      const base64 = await convertToBase64(file);
+
+      // Générer la description avec GPT-4 Vision
+      const description = await generateImageDescription(apiKey, base64);
+
+      // Envoyer l'image et sa description
+      onImageUpload({ base64, description, name: file.name });
+    } catch (error: any) {
+      setError(error.message);
+      console.error('Erreur lors du traitement de l\'image:', error);
+    } finally {
+      setIsUploading(false);
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      await processImage(file);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await processImage(file);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <div
+        className={`p-4 border-2 border-dashed rounded-lg transition-colors ${
+          isDragging
+            ? 'border-blue-500 bg-blue-500/10'
+            : 'border-gray-700 hover:border-gray-600'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          disabled={isUploading}
+        />
+        <div className="flex flex-col items-center justify-center text-gray-400">
+          <Upload size={24} className={`mb-2 ${isUploading ? 'animate-bounce' : ''}`} />
+          <p className="text-sm text-center">
+            {isUploading
+              ? 'Analyse de l\'image en cours...'
+              : 'Cliquez ou glissez une image ici'}
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mt-2 p-2 bg-red-500/10 border border-red-500/50 text-red-500 rounded text-sm flex items-center gap-2">
+          <X size={14} />
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+src\components\MapCapture.tsx:
+```
+import React, { useEffect, useState, useRef } from 'react';
+import { X, Check } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { LatLngExpression } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import html2canvas from 'html2canvas';
+import L from 'leaflet';
+
+// Correction des icônes par défaut de Leaflet
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
+});
+
+interface MapCaptureProps {
+  onCapture: (file: File) => void;
+  onClose: () => void;
+}
+
+const DEFAULT_POSITION: LatLngExpression = [46.603354, 1.888333]; // Centre de la France
+
+// Composant pour mettre à jour la vue de la carte
+function SetMapView({ position, zoom }: { position: LatLngExpression; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(position, zoom);
+  }, [position, zoom, map]);
+  return null;
+}
+
+export function MapCapture({ onCapture, onClose }: MapCaptureProps) {
+  const [position, setPosition] = useState<LatLngExpression>(DEFAULT_POSITION);
+  const [zoom, setZoom] = useState(13);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setPosition([pos.coords.latitude, pos.coords.longitude]);
+          setZoom(16); // Zoom plus important pour se rapprocher
+          setLoading(false);
+        },
+        (err) => {
+          console.error("Erreur de géolocalisation :", err);
+          setError("Impossible de récupérer votre position, utilisation du centre de la France.");
+          setLoading(false);
+        }
+      );
+    } else {
+      setError("La géolocalisation n'est pas supportée par votre navigateur.");
+      setLoading(false);
+    }
+  }, []);
+
+  // Capture de la carte via html2canvas avec options CORS
+  const handleCapture = async () => {
+    if (mapRef.current) {
+      try {
+        const canvas = await html2canvas(mapRef.current, { useCORS: true, allowTaint: false });
+        canvas.toBlob(blob => {
+          if (blob) {
+            const file = new File([blob], 'map.png', { type: 'image/png' });
+            onCapture(file);
+            onClose();
+          }
+        }, 'image/png');
+      } catch (err) {
+        console.error("Erreur lors de la capture de la carte :", err);
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 p-4 rounded-lg relative w-full max-w-2xl">
+        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-white">
+          <X size={20} />
+        </button>
+        <h2 className="text-xl text-white mb-4">Sélectionnez une zone sur la carte</h2>
+        {loading ? (
+          <div className="text-white">Chargement de la carte...</div>
+        ) : (
+          <div ref={mapRef} className="h-96 w-full">
+            <MapContainer center={position} zoom={zoom} style={{ height: '100%', width: '100%' }}>
+              <TileLayer
+                attribution="&copy; <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <SetMapView position={position} zoom={zoom} />
+              <Marker position={position} />
+            </MapContainer>
+          </div>
+        )}
+        {error && <div className="text-red-500 mt-2">{error}</div>}
+        <div className="mt-4 flex justify-end gap-4">
+          <button
+            onClick={handleCapture}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 transition-colors"
+          >
+            <Check size={20} />
+            Valider la zone
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+```
+
+src\components\ProjectModal.tsx:
+```
+import React from 'react';
+import { X } from 'lucide-react';
+
+interface ProjectModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: { name: string; description: string; systemPrompt: string }) => void;
+  initialData?: {
+    name: string;
+    description: string;
+    systemPrompt: string;
+    selectedFiles?: Set<string>;
+    fileContents?: Record<string, string>;
+  };
+  title: string;
+}
+
+export function ProjectModal({ isOpen, onClose, onSubmit, initialData, title }: ProjectModalProps) {
+  const [formData, setFormData] = React.useState({
+    name: initialData?.name || '',
+    description: initialData?.description || '',
+    systemPrompt: initialData?.systemPrompt || ''
+  });
+
+  // Générer le prompt système complet avec les fichiers sélectionnés
+  const fullSystemPrompt = React.useMemo(() => {
+    let prompt = formData.systemPrompt;
+
+    if (initialData?.selectedFiles?.size && initialData.fileContents) {
+      prompt += '\n\nVoici les fichiers du projet :\n';
+      
+      initialData.selectedFiles.forEach(path => {
+        const content = initialData.fileContents ? initialData.fileContents[path] : '';
+        if (content) {
+          const fileName = path.split('/').pop();
+          prompt += `\n\`\`${fileName}\`\`\n\`\`\`\n${content}\n\`\`\`\n`;
+        }
+      });
+    }
+
+    return prompt;
+  }, [formData.systemPrompt, initialData?.selectedFiles, initialData?.fileContents]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return;
+    onSubmit(formData);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 rounded-lg w-full max-w-4xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-white">{title}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Nom du projet *
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full bg-gray-800 text-white rounded-lg p-2.5 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              className="w-full bg-gray-800 text-white rounded-lg p-2.5 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-[100px]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Prompt système
+            </label>
+            <textarea
+              value={formData.systemPrompt}
+              onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
+              placeholder="Instructions générales pour l'IA concernant ce projet..."
+              className="w-full bg-gray-800 text-white rounded-lg p-2.5 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-[100px]"
+            />
+          </div>
+
+          {initialData?.selectedFiles?.size ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Prompt système complet (avec fichiers sélectionnés)
+              </label>
+              <pre className="w-full bg-gray-800 text-white rounded-lg p-2.5 border border-gray-700 overflow-auto max-h-[400px] text-xs">
+                {fullSystemPrompt}
+              </pre>
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              disabled={!formData.name.trim()}
+            >
+              {initialData ? 'Mettre à jour' : 'Créer le projet'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+src\components\ProjectPanel.tsx:
+```
+import { useStore } from '../store';
+import { useFileSystem } from '../hooks/useFileSystem';
+import { FileTree } from './FileTree';
+import { File, Settings, Plus, Trash2, MessageSquare, Upload, Edit2, Check, X, FolderOpen } from 'lucide-react';
+import { ProjectFile } from '../types';
+import { Editor } from './Editor';
+import { ProjectModal } from './ProjectModal';
+import { ChatWindow } from './ChatWindow';
+import { AI_MODELS } from '../services/ai';
+import { EmojiPicker } from './EmojiPicker';
+import { useState, useEffect, useRef } from 'react';
+
+export function ProjectPanel() {
+  const {
+    projects,
+    currentProjectId,
+    updateProject,
+    addFile,
+    updateFile,
+    deleteFile,
+    chats,
+    addChat,
+    deleteChat,
+    currentChatId,
+    setCurrentChat,
+    setCurrentProject,
+    updateChat,
+    updateChatEmoji
+  } = useStore();
+
+  const [selectedFile, setSelectedFile] = useState<ProjectFile | null>(null);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [showingChat, setShowingChat] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingChatTitle, setEditingChatTitle] = useState('');
+  const [editingEmoji, setEditingEmoji] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [isRenaming, setIsRenaming] = useState<string | null>(null);
+  const [newName, setNewName] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [autoSaveInterval, setAutoSaveInterval] = useState<number | null>(null);
+  const [lastSavedContent, setLastSavedContent] = useState<string>('');
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [fileContents, setFileContents] = useState<Record<string, string>>({});
+
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    isPWA,
+    hasFileSystemAccess,
+    fileTree,
+    isLoading,
+    requestFileSystemAccess,
+    readFileContent,
+    writeFileContent,
+    createFile,
+    createDirectory,
+    deleteEntry,
+    renameEntry,
+    refreshFileTree,
+    watchFileChanges,
+    moveEntry,
+    copyEntry,
+    fileStats,
+    rootDirectory,
+    getAllFilesInDirectory
+  } = useFileSystem();
+
+  const currentProject = projects.find(p => p.id === currentProjectId);
+  const projectChats = chats.filter(chat => chat.projectId === currentProjectId);
+
+  // Reset du chat courant quand on change de projet
+  useEffect(() => {
+    setCurrentChat(null);
+  }, [currentProjectId, setCurrentChat]);
+
+  // Surveillance des changements de fichiers
+  useEffect(() => {
+    if (hasFileSystemAccess) {
+      const unwatch = watchFileChanges(async (path) => {
+        if (selectedFile && path === selectedFile.path) {
+          const content = await readFileContent(path);
+          setSelectedFile(prev => prev ? { ...prev, content } : null);
+        }
+        refreshFileTree();
+      });
+      return unwatch;
+    }
+  }, [hasFileSystemAccess, selectedFile, watchFileChanges, readFileContent, refreshFileTree]);
+
+  // Auto-save
+  useEffect(() => {
+    if (hasUnsavedChanges && selectedFile) {
+      const interval = window.setInterval(async () => {
+        try {
+          await handleSaveFile();
+          console.log('Auto-saved:', selectedFile.path);
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
+      }, 30000);
+
+      setAutoSaveInterval(interval);
+      return () => clearInterval(interval);
+    }
+    return () => {};
+  }, [hasUnsavedChanges, selectedFile]);
+
+  // Nettoyage de l'intervalle d'auto-save
+  useEffect(() => {
+    return () => {
+      if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+      }
+    };
+  }, [autoSaveInterval]);
+
+  // Gestion des raccourcis clavier
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && selectedFile) {
+        e.preventDefault();
+        await handleSaveFile();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFile]);
+
+  // Mise à jour des fichiers sélectionnés dans le projet
+  useEffect(() => {
+    if (currentProject && currentProject.selectedFiles) {
+      // Convertir l'objet Set sérialisé en véritable Set
+      const files = Array.isArray(currentProject.selectedFiles) 
+        ? new Set(currentProject.selectedFiles)
+        : new Set();
+      setSelectedFiles(files);
+    } else {
+      setSelectedFiles(new Set());
+    }
+  }, [currentProject]);
+
+  // Chargement du contenu des fichiers sélectionnés
+  useEffect(() => {
+    const loadSelectedFilesContent = async () => {
+      const contents: Record<string, string> = {};
+      for (const path of selectedFiles) {
+        try {
+          contents[path] = await readFileContent(path);
+        } catch (error) {
+          console.error(`Error loading content for ${path}:`, error);
+        }
+      }
+      setFileContents(contents);
+    };
+
+    if (selectedFiles.size > 0) {
+      loadSelectedFilesContent();
+    }
+  }, [selectedFiles, readFileContent]);
+
+  // Gestion des chats
+  const handleCreateChat = () => {
+    if (!currentProject) return;
+    addChat(AI_MODELS[0], currentProject.id);
+    setShowingChat(true);
+  };
+
+  const handleEditChat = (chatId: string, title: string) => {
+    setEditingChatId(chatId);
+    setEditingChatTitle(title);
+  };
+
+  const handleEditChatEmoji = (chatId: string) => {
+    setEditingEmoji(chatId);
+  };
+
+  const handleSaveChatTitle = (chatId: string) => {
+    if (editingChatTitle.trim()) {
+      updateChat(chatId, { title: editingChatTitle.trim() });
+    }
+    setEditingChatId(null);
+    setEditingChatTitle('');
+  };
+
+  // Gestion des fichiers
+  const handleFileSelect = async (path: string) => {
+    if (!hasFileSystemAccess) return;
+
+    if (hasUnsavedChanges) {
+      const confirm = window.confirm('Vous avez des modifications non sauvegardées. Voulez-vous continuer ?');
+      if (!confirm) return;
+    }
+
+    try {
+      const content = await readFileContent(path);
+      const extension = path.split('.').pop()?.toLowerCase() || '';
+
+      let language = 'plaintext';
+      switch (extension) {
+        case 'js': language = 'javascript'; break;
+        case 'ts':
+        case 'tsx': language = 'typescript'; break;
+        case 'jsx': language = 'javascript'; break;
+        case 'html': language = 'html'; break;
+        case 'css': language = 'css'; break;
+        case 'json': language = 'json'; break;
+        case 'md': language = 'markdown'; break;
+        case 'py': language = 'python'; break;
+      }
+
+      const file: ProjectFile = {
+        id: path,
+        name: path.split('/').pop() || '',
+        path,
+        content,
+        language,
+        lastModified: Date.now()
+      };
+
+      setSelectedFile(file);
+      setLastSavedContent(content);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Erreur lors de la lecture du fichier:', error);
+    }
+  };
+
+  const handleFileChange = async (content: string) => {
+    if (!selectedFile) return;
+    setSelectedFile(prev => prev ? { ...prev, content } : null);
+    setHasUnsavedChanges(content !== lastSavedContent);
+  };
+
+  const handleSaveFile = async () => {
+    if (!selectedFile || !hasUnsavedChanges) return;
+
+    try {
+      await writeFileContent(selectedFile.path, selectedFile.content);
+      setLastSavedContent(selectedFile.content);
+      setHasUnsavedChanges(false);
+      console.log('File saved:', selectedFile.path);
+    } catch (error) {
+      console.error('Error saving file:', error);
+    }
+  };
+
+  const handleCreateFile = async (path: string) => {
+    try {
+      await createFile(path);
+      await refreshFileTree();
+      handleFileSelect(path);
+    } catch (error) {
+      console.error('Error creating file:', error);
+    }
+  };
+
+  const handleCreateDirectory = async (path: string) => {
+    try {
+      await createDirectory(path);
+      await refreshFileTree();
+      setExpandedFolders(prev => new Set([...prev, path]));
+    } catch (error) {
+      console.error('Error creating directory:', error);
+    }
+  };
+
+  const handleDeleteEntry = async (path: string) => {
+    const confirm = window.confirm('Êtes-vous sûr de vouloir supprimer cet élément ?');
+    if (!confirm) return;
+
+    try {
+      if (selectedFile?.path === path) {
+        setSelectedFile(null);
+      }
+      await deleteEntry(path);
+      await refreshFileTree();
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+    }
+  };
+
+  const handleRename = (path: string) => {
+    setIsRenaming(path);
+    setNewName(path.split('/').pop() || '');
+    setTimeout(() => renameInputRef.current?.focus(), 0);
+  };
+
+  const handleRenameSubmit = async (oldPath: string) => {
+    if (!newName.trim()) return;
+
+    try {
+      const parts = oldPath.split('/');
+      parts.pop();
+      const newPath = [...parts, newName].join('/');
+
+      await renameEntry(oldPath, newPath);
+
+      if (selectedFile?.path === oldPath) {
+        setSelectedFile(prev => prev ? { ...prev, path: newPath, name: newName } : null);
+      }
+
+      setIsRenaming(null);
+      setNewName('');
+      await refreshFileTree();
+    } catch (error) {
+      console.error('Error renaming entry:', error);
+    }
+  };
+
+  const toggleFolder = (path: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
+
+  const handleFileSelectionChange = async (path: string, selected: boolean, isDirectory?: boolean) => {
+    const newSelectedFiles = new Set(selectedFiles);
+    
+    if (isDirectory) {
+      try {
+        const files = await getAllFilesInDirectory(path);
+        if (selected) {
+          files.forEach(file => newSelectedFiles.add(file));
+          for (const file of files) {
+            try {
+              const content = await readFileContent(file);
+              setFileContents(prev => ({ ...prev, [file]: content }));
+            } catch (error) {
+              console.error(`Error loading content for ${file}:`, error);
+            }
+          }
+        } else {
+          files.forEach(file => {
+            newSelectedFiles.delete(file);
+            setFileContents(prev => {
+              const next = { ...prev };
+              delete next[file];
+              return next;
+            });
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing directory ${path}:`, error);
+      }
+    } else {
+      if (selected) {
+        newSelectedFiles.add(path);
+        try {
+          const content = await readFileContent(path);
+          setFileContents(prev => ({ ...prev, [path]: content }));
+        } catch (error) {
+          console.error(`Error loading content for ${path}:`, error);
+        }
+      } else {
+        newSelectedFiles.delete(path);
+        setFileContents(prev => {
+          const next = { ...prev };
+          delete next[path];
+          return next;
+        });
+      }
+    }
+    
+    setSelectedFiles(newSelectedFiles);
+    
+    if (currentProject) {
+      updateProject(currentProject.id, { selectedFiles: newSelectedFiles });
+    }
+  };
+
+  // Drag & drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (!hasFileSystemAccess) {
+      alert('Veuillez d\'abord sélectionner un dossier de travail');
+      return;
+    }
+
+    const items = Array.from(e.dataTransfer.items);
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        try {
+          const content = await file.text();
+          await createFile(file.name, content);
+        } catch (error) {
+          console.error('Error processing dropped file:', error);
+        }
+      }
+    }
+
+    await refreshFileTree();
+  };
+
+  if (!currentProject) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gray-800">
+        <div className="text-center">
+          <p className="text-xl text-gray-300 font-medium">Aucun projet sélectionné</p>
+          <p className="mt-2 text-gray-400">Sélectionnez ou créez un projet pour commencer</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 h-screen overflow-hidden">
+      {/* Sidebar gauche */}
+      <div className="w-64 border-r border-gray-700 flex flex-col">
+        {/* En-tête du projet */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-semibold text-white">{currentProject.name}</h1>
+            <button
+              onClick={() => setIsProjectSettingsOpen(true)}
+              className="p-2 text-gray-400 hover:text-white rounded-lg transition-colors"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
+          <p className="text-gray-400 text-sm mb-4">{currentProject.description}</p>
+        </div>
+
+        {/* Sélecteur de vue (Chats/Fichiers) */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowingChat(true)}
+              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${
+                showingChat
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              Chats
+            </button>
+            <button
+              onClick={() => setShowingChat(false)}
+              className={`flex-1 px-3 py-2 rounded-lg transition-colors ${
+                !showingChat
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              Fichiers
+            </button>
+          </div>
+        </div>
+
+        {/* Contenu de la sidebar */}
+        <div className="flex-1 overflow-y-auto">
+          {showingChat ? (
+            <div className="p-4 space-y-2">
+              <button
+                onClick={handleCreateChat}
+                className="flex items-center gap-2 w-full bg-gray-800 hover:bg-gray-700 text-white rounded-lg p-2.5 transition-colors"
+              >
+                <Plus size={20} />
+                Nouveau chat
+              </button>
+
+              {projectChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    chat.id === currentChatId
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-300 hover:bg-gray-800/50'
+                  }`}
+                  onClick={() => setCurrentChat(chat.id)}
+                >
+                  {editingChatId === chat.id ? (
+                    <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={editingChatTitle}
+                        onChange={(e) => setEditingChatTitle(e.target.value)}
+                        className="flex-1 bg-gray-700 text-white rounded px-2 py-1"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleSaveChatTitle(chat.id)}
+                        className="text-green-500 hover:text-green-400"
+                      >
+                        <Check size={16} />
+                      </button>
+                      <button
+                        onClick={() => setEditingChatId(null)}
+                        className="text-red-500 hover:text-red-400"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditChatEmoji(chat.id);
+                          }}
+                          className="w-6 h-6 flex items-center justify-center hover:bg-gray-700 rounded transition-colors"
+                        >
+                          {chat.emoji}
+                        </button>
+                        {editingEmoji === chat.id && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <EmojiPicker
+                              onSelect={(emoji) => {
+                                updateChatEmoji(chat.id, emoji);
+                                setEditingEmoji(null);
+                              }}
+                              onClose={() => setEditingEmoji(null)}
+                            />
+                          </div>
+                        )}
+                        <span className="truncate">{chat.title}</span>
+                      </div>
+                      <div className="hidden group-hover:flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditChat(chat.id, chat.title);
+                          }}
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChat(chat.id);
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 space-y-2">
+              {isPWA ? (
+                hasFileSystemAccess ? (
+                  <div
+                    className="space-y-2"
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {isDragging && (
+                      <div className="absolute inset-0 bg-blue-500/10 border-2 border-blue-500 border-dashed rounded-lg flex items-center justify-center z-50">
+                        <div className="text-blue-500 text-lg font-medium">
+                          Déposez vos fichiers ici
+                        </div>
+                      </div>
+                    )}
+
+                    {fileTree && (
+                      <FileTree
+                        tree={fileTree}
+                        onFileSelect={handleFileSelect}
+                        onCreateFile={handleCreateFile}
+                        onCreateDirectory={handleCreateDirectory}
+                        onRename={handleRename}
+                        onDelete={handleDeleteEntry}
+                        onMove={moveEntry}
+                        onCopy={copyEntry}
+                        expandedFolders={expandedFolders}
+                        onToggleFolder={toggleFolder}
+                        fileStats={fileStats}
+                        rootDirectory={rootDirectory}
+                        selectedFiles={selectedFiles}
+                        onFileSelectionChange={handleFileSelectionChange}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={requestFileSystemAccess}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2.5 transition-colors disabled:opacity-50"
+                  >
+                    <FolderOpen size={20} />
+                    {isLoading ? 'Chargement...' : 'Sélectionner un dossier'}
+                  </button>
+                )
+              ) : (
+                <div className="text-center p-4 bg-gray-800 rounded-lg">
+                  <p className="text-gray-300 mb-2">
+                    Pour accéder aux fichiers de votre système, veuillez installer l'application.
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Cliquez sur l'icône d'installation dans la barre d'adresse de votre navigateur.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Zone principale */}
+      <div className="flex-1 h-full overflow-hidden">
+        {showingChat ? (
+          <ChatWindow
+            projectFiles={currentProject.files}
+            systemPrompt={currentProject.systemPrompt}
+          />
+        ) : selectedFile ? (
+          <div className="flex flex-col h-full">
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <File size={16} className="text-gray-400" />
+                  <span className="text-white font-medium">{selectedFile.path}</span>
+                  {hasUnsavedChanges && (
+                    <span className="text-yellow-500 text-sm">•</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  {hasUnsavedChanges && (
+                    <button
+                      onClick={handleSaveFile}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-sm"
+                    >
+                      Sauvegarder
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <Editor
+                value={selectedFile.content}
+                language={selectedFile.language}
+                onChange={handleFileChange}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-800">
+            <div className="text-center">
+              <p className="text-xl text-gray-300 font-medium">Aucun fichier sélectionné</p>
+              <p className="mt-2 text-gray-400">
+                {isPWA
+                  ? hasFileSystemAccess
+                    ? 'Sélectionnez un fichier dans l\'arborescence pour commencer à éditer'
+                    : 'Sélectionnez un dossier pour accéder à vos fichiers'
+                  : 'Installez l\'application pour accéder à vos fichiers'}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal des paramètres du projet */}
+      <ProjectModal
+        isOpen={isProjectSettingsOpen}
+        onClose={() => setIsProjectSettingsOpen(false)}
+        onSubmit={(data) => {
+          updateProject(currentProject.id, data);
+          setIsProjectSettingsOpen(false);
+        }}
+        initialData={{
+          ...currentProject,
+          selectedFiles,
+          fileContents
+        }}
+        title="Paramètres du projet"
+      />
+    </div>
+  );
+}
+```
+
+src\components\SearchModal.tsx:
+```
+import React from 'react';
+import { Search, File, MessageSquare, FolderOpen } from 'lucide-react';
+import { useStore } from '../store';
+
+interface SearchResult {
+  id: string;
+  type: 'chat' | 'project' | 'file';
+  title: string;
+  subtitle?: string;
+}
+
+export function SearchModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { chats, projects } = useStore();
+  const [query, setQuery] = React.useState('');
+  const [results, setResults] = React.useState<SearchResult[]>([]);
+
+  React.useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+
+    const searchResults: SearchResult[] = [];
+    const searchTerm = query.toLowerCase();
+
+    // Recherche dans les chats
+    chats.forEach(chat => {
+      if (chat.title.toLowerCase().includes(searchTerm)) {
+        searchResults.push({
+          id: chat.id,
+          type: 'chat',
+          title: chat.title,
+          subtitle: `Chat - ${chat.model.name}`
+        });
+      }
+    });
+
+    // Recherche dans les projets et leurs fichiers
+    projects.forEach(project => {
+      if (project.name.toLowerCase().includes(searchTerm)) {
+        searchResults.push({
+          id: project.id,
+          type: 'project',
+          title: project.name,
+          subtitle: 'Projet'
+        });
+      }
+
+      project.files.forEach(file => {
+        if (file.name.toLowerCase().includes(searchTerm)) {
+          searchResults.push({
+            id: file.id,
+            type: 'file',
+            title: file.name,
+            subtitle: `Fichier - ${project.name}`
+          });
+        }
+      });
+    });
+
+    setResults(searchResults);
+  }, [query, chats, projects]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[20vh] z-50 animate-fade-in">
+      <div className="w-full max-w-2xl bg-zinc-900 rounded-lg shadow-xl border border-zinc-800">
+        <div className="p-4 border-b border-zinc-800">
+          <div className="flex items-center gap-3">
+            <Search className="text-zinc-400" size={20} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher..."
+              className="flex-1 bg-transparent text-white placeholder-zinc-400 focus:outline-none"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto">
+          {results.length > 0 ? (
+            <div className="p-2">
+              {results.map((result) => (
+                <div
+                  key={result.id}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-800 cursor-pointer"
+                >
+                  {result.type === 'chat' && <MessageSquare size={18} className="text-zinc-400" />}
+                  {result.type === 'project' && <FolderOpen size={18} className="text-zinc-400" />}
+                  {result.type === 'file' && <File size={18} className="text-zinc-400" />}
+                  <div>
+                    <div className="text-white">{result.title}</div>
+                    {result.subtitle && (
+                      <div className="text-sm text-zinc-400">{result.subtitle}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : query ? (
+            <div className="p-4 text-center text-zinc-400">
+              Aucun résultat trouvé pour "{query}"
+            </div>
+          ) : (
+            <div className="p-4 text-center text-zinc-400">
+              Commencez à taper pour rechercher
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+src\components\SettingsModal.tsx:
+```
+import { X } from 'lucide-react';
+import { useStore } from '../store';
+import { AI_MODELS } from '../services/ai';
+
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+  const { apiKeys, setApiKey } = useStore();
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 rounded-lg w-full max-w-md p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white"
+        >
+          <X size={20} />
+        </button>
+
+        <h2 className="text-xl font-semibold text-white mb-6">Paramètres</h2>
+
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-white">Clés API</h3>
+            {AI_MODELS.map((model) => (
+              <div key={model.id} className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  {model.name}
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys[model.id] || ''}
+                  onChange={(e) => setApiKey(model.id, e.target.value)}
+                  className="w-full bg-gray-800 text-white rounded-lg p-2.5 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  placeholder={`Clé API ${model.name}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+src\components\Sidebar.tsx:
+```
+import React from 'react';
+import { Plus, Trash2, Edit2, Check, X, FolderOpen } from 'lucide-react';
+import { useStore } from '../store';
+import { AI_MODELS } from '../services/ai';
+import { ProjectModal } from './ProjectModal';
+import { EmojiPicker } from './EmojiPicker';
+
+interface SidebarProps {
+  onViewChange: (view: 'chat' | 'project') => void;
+  currentView: 'chat' | 'project';
+  isCollapsed: boolean;
+}
+
+export function Sidebar({ currentView, onViewChange, isCollapsed }: SidebarProps) {
+  const {
+    chats,
+    currentChatId,
+    addChat,
+    deleteChat,
+    setCurrentChat,
+    updateChatTitle,
+    updateChatEmoji,
+    projects,
+    currentProjectId,
+    addProject,
+    deleteProject,
+    setCurrentProject,
+    updateProject
+  } = useStore();
+
+  const [editingTitle, setEditingTitle] = React.useState<string | null>(null);
+  const [tempTitle, setTempTitle] = React.useState('');
+  const [selectedModel, setSelectedModel] = React.useState(AI_MODELS[0]);
+  const [isProjectModalOpen, setIsProjectModalOpen] = React.useState(false);
+  const [editingProject, setEditingProject] = React.useState<string | null>(null);
+  const [editingEmoji, setEditingEmoji] = React.useState<string | null>(null);
+
+  const generalChats = chats.filter(chat => !chat.projectId);
+
+  const handleEditTitle = (id: string, title: string) => {
+    setEditingTitle(id);
+    setTempTitle(title);
+  };
+
+  const handleSaveTitle = (id: string) => {
+    if (tempTitle.trim()) {
+      updateChatTitle(id, tempTitle.trim());
+    }
+    setEditingTitle(null);
+  };
+
+  const handleCreateProject = (data: { name: string; description: string; systemPrompt: string }) => {
+    addProject(data.name, data.description, data.systemPrompt);
+    onViewChange('project');
+  };
+
+  const handleUpdateProject = (data: { name: string; description: string; systemPrompt: string }) => {
+    if (editingProject) {
+      updateProject(editingProject, data);
+      setEditingProject(null);
+    }
+  };
+
+  const handleEditProject = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setEditingProject(projectId);
+      setIsProjectModalOpen(true);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {currentView === 'chat' ? (
+        <>
+          <div className={`flex items-center ${isCollapsed ? 'justify-center p-2' : 'justify-between p-4'}`}>
+            {isCollapsed ? (
+              <button
+                onClick={() => addChat(selectedModel)}
+                className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors"
+                title="Nouvelle conversation"
+              >
+                <Plus size={24} />
+              </button>
+            ) : (
+              <button
+                onClick={() => addChat(selectedModel)}
+                className="flex items-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2.5 transition-colors"
+              >
+                <Plus size={20} />
+                Nouvelle conversation
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2 p-4">
+            {isCollapsed ? (
+              <div className="flex flex-col items-center gap-2">
+                {generalChats.map((chat) => (
+                  <button
+                    key={chat.id}
+                    onClick={() => setCurrentChat(chat.id)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                      chat.id === currentChatId
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }`}
+                    title={chat.title}
+                  >
+                    {chat.emoji}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              generalChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    chat.id === currentChatId
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-300 hover:bg-gray-800/50'
+                  }`}
+                  onClick={() => setCurrentChat(chat.id)}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingEmoji(chat.id);
+                      }}
+                      className="w-6 h-6 flex items-center justify-center hover:bg-gray-700 rounded transition-colors"
+                    >
+                      {chat.emoji}
+                    </button>
+                    {editingEmoji === chat.id && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <EmojiPicker
+                          onSelect={(emoji) => {
+                            updateChatEmoji(chat.id, emoji);
+                            setEditingEmoji(null);
+                          }}
+                          onClose={() => setEditingEmoji(null)}
+                        />
+                      </div>
+                    )}
+                    {editingTitle === chat.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="text"
+                          value={tempTitle}
+                          onChange={(e) => setTempTitle(e.target.value)}
+                          className="flex-1 bg-gray-700 text-white rounded px-2 py-1"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveTitle(chat.id);
+                          }}
+                          className="text-green-500 hover:text-green-400"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTitle(null);
+                          }}
+                          className="text-red-500 hover:text-red-400"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="truncate">{chat.title}</span>
+                        <div className="hidden group-hover:flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditTitle(chat.id, chat.title);
+                            }}
+                            className="text-gray-400 hover:text-white transition-colors"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteChat(chat.id);
+                            }}
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {!isCollapsed && (
+            <button
+              onClick={() => setIsProjectModalOpen(true)}
+              className="flex items-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2.5 transition-colors mb-4"
+            >
+              <Plus size={20} />
+              Nouveau projet
+            </button>
+          )}
+
+          {!isCollapsed && projects.map((project) => (
+            <div
+              key={project.id}
+              className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                project.id === currentProjectId
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-300 hover:bg-gray-800/50'
+              }`}
+              onClick={() => setCurrentProject(project.id)}
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <FolderOpen size={18} />
+                <span className="truncate">{project.name}</span>
+              </div>
+              <div className="hidden group-hover:flex items-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditProject(project.id);
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteProject(project.id);
+                  }}
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      <ProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => {
+          setIsProjectModalOpen(false);
+          setEditingProject(null);
+        }}
+        onSubmit={editingProject ? handleUpdateProject : handleCreateProject}
+        initialData={editingProject ? projects.find(p => p.id === editingProject) : undefined}
+        title={editingProject ? 'Modifier le projet' : 'Nouveau projet'}
+      />
+    </div>
+  );
+}
+```
+
+src\components\WebcamCapture.tsx:
+```
+import React, { useRef, useEffect, useState } from 'react';
+import { X, Camera } from 'lucide-react';
+
+interface WebcamCaptureProps {
+  onCapture: (file: File) => void;
+  onClose: () => void;
+}
+
+export function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function startVideo() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      } catch (err: any) {
+        setError('Impossible d\'accéder à la webcam');
+        console.error(err);
+      }
+    }
+    startVideo();
+
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  const handleCapture = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        if (blob) {
+          const file = new File([blob], 'webcam.png', { type: 'image/png' });
+          onCapture(file);
+          onClose();
+        }
+      }, 'image/png');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 p-4 rounded-lg relative">
+        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-white">
+          <X size={20} />
+        </button>
+        {error ? (
+          <p className="text-red-500">{error}</p>
+        ) : (
+          <>
+            <video ref={videoRef} className="w-full max-w-md rounded" autoPlay muted />
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={handleCapture}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 transition-colors"
+              >
+                <Camera size={20} />
+                Prendre la photo
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+```
+
+src\index.css:
+```
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+/* Thème global */
+body {
+  @apply bg-[#0A0A0A] text-white;
+}
+
+/* Styles des composants communs */
+.btn {
+  @apply px-4 py-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20;
+}
+
+.btn-primary {
+  @apply bg-white text-black hover:bg-white/90;
+}
+
+.btn-secondary {
+  @apply bg-zinc-800 text-white hover:bg-zinc-700;
+}
+
+.input {
+  @apply bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 text-white placeholder-zinc-400
+         focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent
+         transition-all duration-200;
+}
+
+.card {
+  @apply bg-zinc-900 rounded-lg border border-zinc-800;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-zinc-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-700 rounded-full hover:bg-zinc-600 transition-colors;
+}
+
+/* Styles pour le markdown */
+.prose {
+  @apply prose-invert max-w-none;
+}
+
+.prose pre {
+  @apply bg-black rounded-lg border border-zinc-800 !important;
+}
+
+.prose code {
+  @apply bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded text-sm !important;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0 !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Transitions */
+.transition-smooth {
+  @apply transition-all duration-200 ease-in-out;
+}
+```
+

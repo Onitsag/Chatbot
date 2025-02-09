@@ -20,7 +20,8 @@ export const useStore = create<AppState>()(
           projectId,
           emoji: '💬',
           images: [],
-          streamingEnabled: true
+          streamingEnabled: true,
+          systemPrompt: '' // ou une valeur par défaut
         };
 
         set((state) => ({
@@ -48,14 +49,23 @@ export const useStore = create<AppState>()(
         }));
       },
 
-      addMessage: (chatId: string, role: Message['role'], content: string, selectedImages?: string[]) => {
-        const message = {
-          id: crypto.randomUUID(),
+      addMessage: (
+        chatId: string,
+        role: Message['role'],
+        content: string,
+        selectedImages?: string[],
+        messageId?: string,
+        offline?: boolean
+      ) => {
+        const id = messageId || crypto.randomUUID();
+        const message: Message = {
+          id,
           role,
           content,
           timestamp: Date.now(),
           isEditing: false,
-          selectedImages
+          selectedImages,
+          offline: offline || false
         };
 
         set((state) => ({
@@ -67,18 +77,35 @@ export const useStore = create<AppState>()(
         }));
       },
 
+
+      clearOfflineFlag: (chatId: string, messageId: string) => {
+        set(state => ({
+          chats: state.chats.map(chat => {
+            if (chat.id === chatId) {
+              return {
+                ...chat,
+                messages: chat.messages.map(msg =>
+                  msg.id === messageId ? { ...msg, offline: false } : msg
+                )
+              };
+            }
+            return chat;
+          })
+        }));
+      },
+
       updateMessage: (chatId: string, messageId: string, content: string) => {
         set((state) => ({
           chats: state.chats.map((chat) =>
             chat.id === chatId
               ? {
-                  ...chat,
-                  messages: chat.messages.map((msg) =>
-                    msg.id === messageId
-                      ? { ...msg, content, isEditing: false }
-                      : msg
-                  )
-                }
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === messageId
+                    ? { ...msg, content, isEditing: false }
+                    : msg
+                )
+              }
               : chat
           )
         }));
@@ -89,11 +116,11 @@ export const useStore = create<AppState>()(
           chats: state.chats.map((chat) =>
             chat.id === chatId
               ? {
-                  ...chat,
-                  messages: chat.messages.map((msg) =>
-                    msg.id === messageId ? { ...msg, isEditing } : msg
-                  )
-                }
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === messageId ? { ...msg, isEditing } : msg
+                )
+              }
               : chat
           )
         }));
@@ -124,12 +151,12 @@ export const useStore = create<AppState>()(
         set((state) => ({
           chats: state.chats.map((chat) =>
             chat.id === chatId
-              ? { 
-                  ...chat, 
-                  images: Array.isArray(chat.images) 
-                    ? [...chat.images, newImage]
-                    : [newImage]
-                }
+              ? {
+                ...chat,
+                images: Array.isArray(chat.images)
+                  ? [...chat.images, newImage]
+                  : [newImage]
+              }
               : chat
           )
         }));
@@ -142,15 +169,15 @@ export const useStore = create<AppState>()(
           chats: state.chats.map((chat) =>
             chat.id === chatId
               ? {
-                  ...chat,
-                  images: Array.isArray(chat.images) 
-                    ? chat.images.filter((img) => img.id !== imageId)
-                    : [],
-                  messages: chat.messages.map((msg) => ({
-                    ...msg,
-                    selectedImages: msg.selectedImages?.filter((id) => id !== imageId)
-                  }))
-                }
+                ...chat,
+                images: Array.isArray(chat.images)
+                  ? chat.images.filter((img) => img.id !== imageId)
+                  : [],
+                messages: chat.messages.map((msg) => ({
+                  ...msg,
+                  selectedImages: msg.selectedImages?.filter((id) => id !== imageId)
+                }))
+              }
               : chat
           )
         }));
@@ -212,10 +239,10 @@ export const useStore = create<AppState>()(
           projects: state.projects.map((project) =>
             project.id === projectId
               ? {
-                  ...project,
-                  files: [...project.files, newFile],
-                  lastModified: Date.now()
-                }
+                ...project,
+                files: [...project.files, newFile],
+                lastModified: Date.now()
+              }
               : project
           )
         }));
@@ -226,14 +253,14 @@ export const useStore = create<AppState>()(
           projects: state.projects.map((project) =>
             project.id === projectId
               ? {
-                  ...project,
-                  files: project.files.map((file) =>
-                    file.id === fileId
-                      ? { ...file, content, lastModified: Date.now() }
-                      : file
-                  ),
-                  lastModified: Date.now()
-                }
+                ...project,
+                files: project.files.map((file) =>
+                  file.id === fileId
+                    ? { ...file, content, lastModified: Date.now() }
+                    : file
+                ),
+                lastModified: Date.now()
+              }
               : project
           )
         }));
@@ -244,10 +271,10 @@ export const useStore = create<AppState>()(
           projects: state.projects.map((project) =>
             project.id === projectId
               ? {
-                  ...project,
-                  files: project.files.filter((file) => file.id !== fileId),
-                  lastModified: Date.now()
-                }
+                ...project,
+                files: project.files.filter((file) => file.id !== fileId),
+                lastModified: Date.now()
+              }
               : project
           )
         }));

@@ -1,3 +1,4 @@
+// vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -6,6 +7,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // On passe en mode injectManifest pour utiliser notre SW personnalisé.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw-custom.js',
       registerType: 'autoUpdate',
       includeAssets: ['icon-192x192.png', 'icon-512x512.png'],
       manifest: {

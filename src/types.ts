@@ -5,6 +5,7 @@ export interface Message {
   timestamp: number;
   isEditing?: boolean;
   selectedImages?: string[];
+  offline?: boolean;
 }
 
 export interface ChatImage {
@@ -37,9 +38,9 @@ export interface Project {
 }
 
 export interface HistoryBranch {
-  baseMessageId: string; 
-  branchIndex: number; 
-  messages: Message[]; 
+  baseMessageId: string;
+  branchIndex: number;
+  messages: Message[];
 }
 
 export interface Chat {
@@ -51,6 +52,7 @@ export interface Chat {
   emoji: string;
   images: ChatImage[];
   streamingEnabled: boolean;
+  systemPrompt?: string;
 }
 
 export interface AIModel {
@@ -68,26 +70,29 @@ export interface AppState {
   currentChatId: string | null;
   currentProjectId: string | null;
   apiKeys: Record<string, string>;
-  
+
   getCurrentChat: () => Chat | null;
-  
+
   addChat: (model: AIModel, projectId?: string) => void;
   deleteChat: (id: string) => void;
   setCurrentChat: (id: string | null) => void;
   updateChat: (id: string, updates: Partial<Chat>) => void;
   addMessage: (
-    chatId: string, 
-    role: Message['role'], 
-    content: string, 
-    selectedImages?: string[]
+    chatId: string,
+    role: Message['role'],
+    content: string,
+    selectedImages?: string[],
+    messageId?: string,
+    offline?: boolean
   ) => void;
+  clearOfflineFlag: (chatId: string, messageId: string) => void;
   updateMessage: (chatId: string, messageId: string, content: string) => void;
   setMessageEditing: (chatId: string, messageId: string, isEditing: boolean) => void;
   updateChatTitle: (chatId: string, title: string) => void;
   updateChatEmoji: (chatId: string, emoji: string) => void;
   addImageToChat: (chatId: string, image: Omit<ChatImage, 'id'>) => string;
   deleteImageFromChat: (chatId: string, imageId: string) => void;
-  
+
   addProject: (name: string, description: string, systemPrompt: string) => void;
   deleteProject: (id: string) => void;
   setCurrentProject: (id: string | null) => void;
@@ -95,7 +100,7 @@ export interface AppState {
   addFile: (projectId: string, file: Omit<ProjectFile, 'id'>) => void;
   updateFile: (projectId: string, fileId: string, content: string) => void;
   deleteFile: (projectId: string, fileId: string) => void;
-  
+
   setApiKey: (modelId: string, apiKey: string) => void;
   setProjectDirectory: (projectId: string, handle: any | null) => void;
 }

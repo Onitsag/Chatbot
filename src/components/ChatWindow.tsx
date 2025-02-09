@@ -1,25 +1,12 @@
 import React from 'react';
-import {
-  Send,
-  Edit2,
-  Check,
-  X,
-  Loader,
-  ChevronDown,
-  ToggleLeft,
-  ToggleRight,
-  RotateCw
-} from 'lucide-react';
+import { Send, Edit2, Check, X, Loader, ChevronDown, ToggleLeft, ToggleRight, RotateCw, Camera, MapPin } from 'lucide-react';
 import { useStore } from '../store';
-import {
-  sendMessage,
-  generateImageDescription,
-  AI_MODELS,
-  streamResponse,
-  handleFunctionCallsAndRespond
-} from '../services/ai';
+import { sendMessage, generateImageDescription, AI_MODELS, streamResponse, handleFunctionCallsAndRespond } from '../services/ai';
 import { marked } from 'marked';
 import { ProjectFile, ChatImage, AIModel } from '../types';
+import { WebcamCapture } from './WebcamCapture';
+import { MapCapture } from './MapCapture';
+import { storePendingMessage } from '../utils/offlineMessages';
 import 'highlight.js/styles/github-dark.css';
 
 /**
@@ -60,6 +47,9 @@ export function ChatWindow({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = React.useState(false);
   const [streamingEnabled, setStreamingEnabled] = React.useState(true);
   const [currentResponse, setCurrentResponse] = React.useState('');
+  const [isWebcamOpen, setIsWebcamOpen] = React.useState(false);
+  const [isMapOpen, setIsMapOpen] = React.useState(false);
+
 
   // Nouvelle fonctionnalité : limiter l'historique
   // On lit localStorage si présent, sinon 15
@@ -79,6 +69,11 @@ export function ChatWindow({
 
   // Liste locale d'images
   const [localImages, setLocalImages] = React.useState<ChatImage[]>([]);
+
+
+  const webcamSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const geolocationSupported = 'geolocation' in navigator;
+
 
   // Sélection du chat
   const currentChat = chats.find(chat => chat.id === currentChatId);
@@ -142,6 +137,20 @@ export function ChatWindow({
       }
     }
     return result;
+  }
+
+  function triggerNotification(message: string) {
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification(message);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            new Notification(message);
+          }
+        });
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -305,49 +314,59 @@ export function ChatWindow({
       setError(`Veuillez entrer une clé API pour ${currentChat.model.name}`);
       return;
     }
-
     setError(null);
 
-    // Message tapé par l'utilisateur
+    // Préparer le message en intégrant les descriptions d'images
     const userTyped = input.trim();
-    // Copie qu'on enverra à l'IA (avec desc)
     let msgForAI = userTyped;
-
-    // @Nom => @Nom(desc)
     for (const img of localImages) {
       const mention = '@' + img.name;
       if (msgForAI.includes(mention)) {
-        msgForAI = msgForAI.replace(
-          mention,
-          mention + ` (${img.description})`
-        );
+        msgForAI = msgForAI.replace(mention, mention + ` (${img.description})`);
       }
     }
-
     setInput('');
     setSelectedImages([]);
 
-    // On stocke visuellement le message user tel que tapé
-    addMessage(currentChat.id, 'user', userTyped);
+    // Si hors ligne, on ajoute immédiatement le message avec le flag offline
+    if (!navigator.onLine) {
+      const offlineId = crypto.randomUUID();
+      // Ajout du message avec offline=true (sans modifier le contenu)
+      addMessage(currentChat.id, 'user', msgForAI, undefined, offlineId, true);
+      // Stocker dans IndexedDB pour la synchronisation ultérieure
+      await storePendingMessage({
+        id: offlineId,
+        chatId: currentChat.id,
+        content: msgForAI,
+        timestamp: Date.now()
+      });
+      // Demander la background sync
+      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        const reg = await navigator.serviceWorker.ready;
+        await (reg as any).sync.register('sync-messages');
+      }
+      // Notifier une seule fois (stockage dans localStorage pour éviter les doublons)
+      if (Notification.permission === "granted" && !localStorage.getItem('offlineSyncNotified')) {
+        new Notification("Vous êtes hors ligne. Vos messages seront synchronisés dès le retour de connexion.");
+        localStorage.setItem('offlineSyncNotified', 'true');
+      }
+      return;
+    }
 
+    // Si en ligne, envoyer le message normalement (il est affiché dès la saisie)
+    addMessage(currentChat.id, 'user', userTyped);
     setIsLoading(true);
     setCurrentResponse('');
 
     try {
-      // Construire un message system invisible
-      const systemBase = `Tu es un assistant IA. Réponds brièvement. L'utilisateur peut t'envoyer des images en mentionnant leur nom, exemple "@image.png". Tu peux voir l'image grâce à la description qui se trouve automatiquement entre parenthèse après la mention de l'image en question.\n`;
-      const fullSystem = systemPrompt
-        ? systemBase + "\n" + systemPrompt
-        : systemBase;
+      // Préparation du message système et de l'historique
+      const systemBase = `Tu es un assistant IA. Réponds brièvement. L'utilisateur peut t'envoyer des images en mentionnant leur nom, exemple "@image.png". Tu peux voir l'image grâce à la description qui se trouve automatiquement entre parenthèses après la mention de l'image en question.\n`;
+      const fullSystem = systemPrompt ? systemBase + "\n" + systemPrompt : systemBase;
       const systemMsg = { role: 'system' as const, content: fullSystem };
 
-      // On retire du store tout ce qui est role=system (s'il y en a)
       const visibleHistory = currentChat.messages.filter(m => m.role !== 'system');
-
-      // On ne prend que les X derniers messages : historySize
       const lastMessages = visibleHistory.slice(-historySize);
 
-      // On construit l'historique final => [system, ...lastMessages, nouveau user]
       const finalMessages = [
         systemMsg,
         ...lastMessages.map(m => ({ role: m.role, content: m.content })),
@@ -357,13 +376,11 @@ export function ChatWindow({
       if (streamingEnabled && currentChat.model.supportsStreaming) {
         const finalToolCalls: Record<number, { name: string; arguments: string }> = {};
         const streamGen = streamResponse(currentChat.model, apiKey, finalMessages, finalToolCalls);
-
         let accum = '';
         for await (const chunk of streamGen) {
           accum += chunk;
           setCurrentResponse(accum);
         }
-        // handle calls
         const addRes = await handleFunctionCallsAndRespond(
           currentChat.model,
           apiKey,
@@ -377,7 +394,6 @@ export function ChatWindow({
           addMessage(currentChat.id, 'assistant', finalAnswer);
         }
       } else {
-        // Pas streaming
         const resp = await sendMessage(
           currentChat.model,
           apiKey,
@@ -396,6 +412,9 @@ export function ChatWindow({
       setCurrentResponse('');
     }
   }
+
+
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Édition
@@ -416,22 +435,22 @@ export function ChatWindow({
     }
     updateMessage(currentChat.id, msgId, editingContent);
     setMessageEditing(currentChat.id, msgId, false);
-  
+
     // 2. Réacquérir l'état mis à jour du chat depuis le store
     const updatedChat = useStore.getState().chats.find(chat => chat.id === currentChat.id);
     if (!updatedChat) return;
-  
+
     // 3. Trouver l'index du message modifié dans l'état actualisé
     const index = updatedChat.messages.findIndex(m => m.id === msgId);
     if (index === -1) return;
-  
+
     // 4. Tronquer les messages postérieurs au message modifié
     const trimmedMessages = updatedChat.messages.slice(0, index + 1);
     updateChat(updatedChat.id, { messages: trimmedMessages });
-  
+
     // 5. Réinitialiser l'état local d'édition si nécessaire
     setEditingContent('');
-  
+
     // 6. Générer une nouvelle réponse de l'IA basée sur le message modifié
     await generateResponseForLastUser();
   }
@@ -455,34 +474,34 @@ export function ChatWindow({
     }
     const idx = currentChat.messages.findIndex(m => m.id === assistantMsgId);
     if (idx === -1) return;
-  
+
     // Vider le contenu du message existant avant régénération
     updateMessage(currentChat.id, assistantMsgId, '');
-  
+
     // Trouver l'index du message utilisateur précédent
     const userIdx = idx - 1;
     if (userIdx < 0 || currentChat.messages[userIdx].role !== 'user') return;
-  
+
     const userMsg = currentChat.messages[userIdx].content;
     setInput('');
     setIsLoading(true);
-  
+
     try {
       const apiKey = apiKeys[currentChat.model.id];
       if (!apiKey) {
         setError(`Veuillez entrer une clé API pour ${currentChat.model.name}`);
         return;
       }
-  
+
       // Construction du message système
       const systemBase = "Tu es Georges, un assistant IA. Réponds brièvement.\n";
       const fullSystem = systemPrompt ? systemBase + "\n" + systemPrompt : systemBase;
       const systemMsg = { role: 'system' as const, content: fullSystem };
-  
+
       // Préparation de l'historique et récupération des X derniers messages
       const visibleHistory = currentChat.messages.filter(m => m.role !== 'system');
       const lastMessages = visibleHistory.slice(0, idx).slice(-historySize);
-  
+
       // Intégration des descriptions d'images dans le message utilisateur si nécessaire
       let userForAI = userMsg;
       for (const img of localImages) {
@@ -491,34 +510,34 @@ export function ChatWindow({
           userForAI = userForAI.replace(mention, mention + ` (${img.description})`);
         }
       }
-  
+
       const finalMessages = [
         systemMsg,
         ...lastMessages.map(m => ({ role: m.role, content: m.content })),
         { role: 'user' as const, content: userForAI }
       ];
-  
+
       if (streamingEnabled && currentChat.model.supportsStreaming) {
         const finalToolCalls: Record<number, { name: string; arguments: string }> = {};
         const streamGen = streamResponse(currentChat.model, apiKey, finalMessages, finalToolCalls);
-  
+
         let accum = '';
         for await (const chunk of streamGen) {
           accum += chunk;
           // Mise à jour directe du message existant pendant le streaming
           updateMessage(currentChat.id, assistantMsgId, accum);
         }
-  
+
         const addRes = await handleFunctionCallsAndRespond(
           currentChat.model,
           apiKey,
           [...finalMessages, { role: 'assistant', content: accum }],
           finalToolCalls
         );
-  
+
         let finalAnswer = accum.trim();
         if (addRes.trim()) finalAnswer += '\n\n' + addRes.trim();
-  
+
         if (finalAnswer) {
           // Mise à jour finale du message avec la réponse complète
           updateMessage(currentChat.id, assistantMsgId, finalAnswer);
@@ -543,84 +562,84 @@ export function ChatWindow({
   }
 
   async function generateResponseForLastUser() {
-  // Rechercher le chat actuel directement depuis le store pour obtenir la version mise à jour
-  const updatedChat = useStore.getState().chats.find(chat => chat.id === currentChatId);
-  if (!updatedChat) return;
+    // Rechercher le chat actuel directement depuis le store pour obtenir la version mise à jour
+    const updatedChat = useStore.getState().chats.find(chat => chat.id === currentChatId);
+    if (!updatedChat) return;
 
-  const lastMsg = updatedChat.messages[updatedChat.messages.length - 1];
-  if (!lastMsg || lastMsg.role !== 'user') return;
+    const lastMsg = updatedChat.messages[updatedChat.messages.length - 1];
+    if (!lastMsg || lastMsg.role !== 'user') return;
 
-  const apiKey = apiKeys[updatedChat.model.id];
-  if (!apiKey) {
-    setError(`Veuillez entrer une clé API pour ${updatedChat.model.name}`);
-    return;
-  }
-
-  setError(null);
-  setIsLoading(true);
-  setCurrentResponse('');
-
-  // Construction du message système et préparation de l’historique
-  const systemBase = "Tu es Georges, un assistant IA. Réponds brièvement.\n";
-  const fullSystem = systemPrompt ? systemBase + "\n" + systemPrompt : systemBase;
-  const systemMsg = { role: 'system' as const, content: fullSystem };
-
-  // Utiliser updatedChat pour construire l'historique
-  const visibleHistory = updatedChat.messages.filter(m => m.role !== 'system');
-  const lastMessages = visibleHistory.slice(-historySize);
-
-  // Préparation du message utilisateur pour l’IA (intégration des descriptions d’images si nécessaire)
-  let msgForAI = lastMsg.content;
-  for (const img of localImages) {
-    const mention = '@' + img.name;
-    if (msgForAI.includes(mention)) {
-      msgForAI = msgForAI.replace(mention, mention + ` (${img.description})`);
+    const apiKey = apiKeys[updatedChat.model.id];
+    if (!apiKey) {
+      setError(`Veuillez entrer une clé API pour ${updatedChat.model.name}`);
+      return;
     }
-  }
 
-  const finalMessages = [
-    systemMsg,
-    ...lastMessages.map(m => ({ role: m.role, content: m.content })),
-    { role: 'user' as const, content: msgForAI }
-  ];
-
-  try {
-    if (streamingEnabled && updatedChat.model.supportsStreaming) {
-      const finalToolCalls: Record<number, { name: string; arguments: string }> = {};
-      const streamGen = streamResponse(updatedChat.model, apiKey, finalMessages, finalToolCalls);
-
-      let accum = '';
-      for await (const chunk of streamGen) {
-        accum += chunk;
-        setCurrentResponse(accum);
-      }
-
-      const addRes = await handleFunctionCallsAndRespond(
-        updatedChat.model,
-        apiKey,
-        [...finalMessages, { role: 'assistant', content: accum }],
-        finalToolCalls
-      );
-
-      let finalAnswer = accum.trim();
-      if (addRes.trim()) finalAnswer += '\n\n' + addRes.trim();
-
-      if (finalAnswer) {
-        addMessage(updatedChat.id, 'assistant', finalAnswer);
-      }
-    } else {
-      const resp = await sendMessage(updatedChat.model, apiKey, finalMessages, updatedChat.images, false);
-      addMessage(updatedChat.id, 'assistant', resp);
-    }
-  } catch (err: any) {
-    const msg = err.message || 'Une erreur est survenue';
-    setError(msg);
-    addMessage(updatedChat.id, 'assistant', `⚠️ ${msg}`);
-  } finally {
-    setIsLoading(false);
+    setError(null);
+    setIsLoading(true);
     setCurrentResponse('');
+
+    // Construction du message système et préparation de l’historique
+    const systemBase = "Tu es Georges, un assistant IA. Réponds brièvement.\n";
+    const fullSystem = systemPrompt ? systemBase + "\n" + systemPrompt : systemBase;
+    const systemMsg = { role: 'system' as const, content: fullSystem };
+
+    // Utiliser updatedChat pour construire l'historique
+    const visibleHistory = updatedChat.messages.filter(m => m.role !== 'system');
+    const lastMessages = visibleHistory.slice(-historySize);
+
+    // Préparation du message utilisateur pour l’IA (intégration des descriptions d’images si nécessaire)
+    let msgForAI = lastMsg.content;
+    for (const img of localImages) {
+      const mention = '@' + img.name;
+      if (msgForAI.includes(mention)) {
+        msgForAI = msgForAI.replace(mention, mention + ` (${img.description})`);
+      }
+    }
+
+    const finalMessages = [
+      systemMsg,
+      ...lastMessages.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user' as const, content: msgForAI }
+    ];
+
+    try {
+      if (streamingEnabled && updatedChat.model.supportsStreaming) {
+        const finalToolCalls: Record<number, { name: string; arguments: string }> = {};
+        const streamGen = streamResponse(updatedChat.model, apiKey, finalMessages, finalToolCalls);
+
+        let accum = '';
+        for await (const chunk of streamGen) {
+          accum += chunk;
+          setCurrentResponse(accum);
+        }
+
+        const addRes = await handleFunctionCallsAndRespond(
+          updatedChat.model,
+          apiKey,
+          [...finalMessages, { role: 'assistant', content: accum }],
+          finalToolCalls
+        );
+
+        let finalAnswer = accum.trim();
+        if (addRes.trim()) finalAnswer += '\n\n' + addRes.trim();
+
+        if (finalAnswer) {
+          addMessage(updatedChat.id, 'assistant', finalAnswer);
+        }
+      } else {
+        const resp = await sendMessage(updatedChat.model, apiKey, finalMessages, updatedChat.images, false);
+        addMessage(updatedChat.id, 'assistant', resp);
+      }
+    } catch (err: any) {
+      const msg = err.message || 'Une erreur est survenue';
+      setError(msg);
+      addMessage(updatedChat.id, 'assistant', `⚠️ ${msg}`);
+    } finally {
+      setIsLoading(false);
+      setCurrentResponse('');
+    }
   }
-}
 
 
 
@@ -789,9 +808,8 @@ export function ChatWindow({
               <span>{currentChat.model.name}</span>
               <ChevronDown
                 size={16}
-                className={`text-gray-400 transition-transform ${
-                  isModelDropdownOpen ? 'rotate-180' : ''
-                }`}
+                className={`text-gray-400 transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''
+                  }`}
               />
             </button>
             {isModelDropdownOpen && (
@@ -803,9 +821,8 @@ export function ChatWindow({
                   <button
                     key={m.id}
                     onClick={() => handleModelChange(m)}
-                    className={`w-full px-4 py-2 text-left hover:bg-gray-600 transition-colors ${
-                      currentChat.model.id === m.id ? 'bg-gray-600 text-white' : 'text-gray-200'
-                    }`}
+                    className={`w-full px-4 py-2 text-left hover:bg-gray-600 transition-colors ${currentChat.model.id === m.id ? 'bg-gray-600 text-white' : 'text-gray-200'
+                      }`}
                   >
                     {m.name}
                   </button>
@@ -826,9 +843,8 @@ export function ChatWindow({
               <span>Hist: {historySize}</span>
               <ChevronDown
                 size={16}
-                className={`text-gray-400 transition-transform ${
-                  isHistoryDropdownOpen ? 'rotate-180' : ''
-                }`}
+                className={`text-gray-400 transition-transform ${isHistoryDropdownOpen ? 'rotate-180' : ''
+                  }`}
               />
             </button>
             {isHistoryDropdownOpen && (
@@ -840,9 +856,8 @@ export function ChatWindow({
                   <button
                     key={num}
                     onClick={() => handleHistorySizeChange(num)}
-                    className={`w-full px-4 py-1 text-left hover:bg-gray-600 transition-colors ${
-                      historySize === num ? 'bg-gray-600 text-white' : 'text-gray-200'
-                    }`}
+                    className={`w-full px-4 py-1 text-left hover:bg-gray-600 transition-colors ${historySize === num ? 'bg-gray-600 text-white' : 'text-gray-200'
+                      }`}
                   >
                     {num}
                   </button>
@@ -910,6 +925,9 @@ export function ChatWindow({
                 {/* Nom + actions */}
                 <div className="absolute top-2 left-2 flex items-center gap-2">
                   <span className="font-bold text-sm text-gray-100">{senderName}</span>
+                  {message.role === 'user' && message.offline && (
+                    <span className="text-red-500" title="Message non synchronisé">&#x26A0;</span>
+                  )}
                 </div>
                 <div className="absolute top-2 right-2 flex items-center gap-2">
                   <button
@@ -1068,8 +1086,7 @@ export function ChatWindow({
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
             placeholder="Écrivez votre message... (Shift+Entrée pour une nouvelle ligne, Entrée pour envoyer)"
-            className="flex-1 bg-gray-700 text-white rounded-lg px-4 py-3
-                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 bg-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
             style={{
               minHeight: '50px',
               maxHeight: '200px',
@@ -1079,17 +1096,77 @@ export function ChatWindow({
             rows={1}
             disabled={isLoading}
           />
+          {webcamSupported ? (
+            <button
+              type="button"
+              onClick={() => setIsWebcamOpen(true)}
+              className="bg-gray-700 text-white rounded-lg px-4 py-3 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Prendre une photo avec la webcam"
+            >
+              <Camera size={20} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="bg-gray-500 text-gray-300 rounded-lg px-4 py-3 cursor-not-allowed"
+              title="Votre navigateur ne supporte pas la webcam"
+            >
+              <Camera size={20} />
+            </button>
+          )}
+
+          {/* Bouton Carte */}
+          {geolocationSupported ? (
+            <button
+              type="button"
+              onClick={() => setIsMapOpen(true)}
+              className="bg-gray-700 text-white rounded-lg px-4 py-3 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Ouvrir la carte"
+            >
+              <MapPin size={20} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="bg-gray-500 text-gray-300 rounded-lg px-4 py-3 cursor-not-allowed"
+              title="La géolocalisation n'est pas supportée sur ce navigateur"
+            >
+              <MapPin size={20} />
+            </button>
+          )}
           <button
             type="submit"
             disabled={isLoading || (!input.trim() && selectedImages.length === 0)}
-            className="bg-blue-600 text-white rounded-lg px-6 py-3 hover:bg-blue-700
-                       focus:outline-none focus:ring-2 focus:ring-blue-500
-                       disabled:opacity-50 disabled:hover:bg-blue-600"
+            className="bg-blue-600 text-white rounded-lg px-6 py-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600"
           >
             <Send size={20} className={isLoading ? 'animate-spin' : ''} />
           </button>
         </div>
       </form>
+      {isWebcamOpen && (
+        <WebcamCapture
+          onCapture={(file: File) => {
+            processImage(file).then(() => {
+              triggerNotification("Photo prise avec la webcam");
+            });
+          }}
+          onClose={() => setIsWebcamOpen(false)}
+        />
+      )}
+      {isMapOpen && (
+        <MapCapture
+          onCapture={(file: File) => {
+            processImage(file).then(() => {
+              triggerNotification("Photo prise depuis la carte");
+            });
+          }}
+          onClose={() => setIsMapOpen(false)}
+        />
+      )}
+
+
     </div>
   );
 }

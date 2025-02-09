@@ -770,7 +770,7 @@ export function ChatWindow({
   return (
     <div
       ref={chatContainerRef}
-      className="flex flex-col h-full bg-gray-800 relative"
+      className="flex flex-col h-full bg-gray-800 relative overflow-hidden"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

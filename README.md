@@ -1,6 +1,6 @@
 # AI Chat App 🤖
 
-Une application de chat moderne et élégante permettant d'interagir avec différents modèles d'IA (GPT-4, Claude, Mistral), avec support PWA pour une installation sur desktop et mobile.
+Une application de chat moderne et élégante permettant d'interagir avec différents modèles d'IA (GPT-4, Claude, Mistral), avec support PWA pour une installation sur desktop. L'application n'est actuellement pas vraiment responsive pour mobile, son objectif est d'être utilisée pour développer, donc uniquement sur PC.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -17,6 +17,13 @@ Une application de chat moderne et élégante permettant d'interagir avec diffé
 - 📍 Fonctionne hors-ligne
 - 🔄 Mise à jour automatique
 
+## ⚠️ A savoir ⚠️
+
+- L'application supporte actuellement que GPT-4 en mode Streaming. Les autres IA et la désactivation du Streaming arriveront plus tard.
+- Pour utiliser une image, vous pouvez copier une image et faire CTRL + V dans une conversation. Sinon, vous pouvez aussi drag & drop l'image. Ensuite, l'image sera automatiquement analysée et vous pourrez la mentionner dans la conversation en utilisant "@" afin que l'IA puisse voir les images que vous voulez.
+- Il est possible d'utiliser la webcam ou notre position, qui seront mises sous forme d'images dans la conversation.
+- Dans l'onglet Projet, vous pouvez créer plusieurs conversations pour le même projet. Vous pouvez définir un "prompt system" que l'IA verra automatiquement dans toutes les conversations du projet concernée. Il est aussi possible de donner l'accès à la PWA au dosssier local de votre projet pour programmer directement depuis l'application. (Dans le futur, les IA pourront développer directement sur votre machine, dans le dossier qui a été partagé)
+
 ## 🚀 Installation
 
 1. Clonez le repository :
@@ -30,17 +37,14 @@ cd Chatbot
 npm install
 ```
 
-3. Créez un fichier `.env` à la racine du projet avec vos clés API :
-```env
-VITE_OPENAI_API_KEY=votre_clé_openai
-VITE_ANTHROPIC_API_KEY=votre_clé_anthropic
-VITE_MISTRAL_API_KEY=votre_clé_mistral
-```
 
-4. Lancez le serveur de développement :
+3. Lancez le serveur de développement :
 ```bash
 npm run dev
 ```
+
+4. Ajoutez une clé d'API dans les paramètres de l'application.
+Actuellement, seul GPT fonctionne, et uniquement en mode Streaming activé.
 
 ## 🏗️ Build et déploiement
 
@@ -59,76 +63,12 @@ npm run preview
 ### Sur Desktop (Chrome, Edge, etc.)
 
 1. Ouvrez l'application dans votre navigateur
-2. Cliquez sur l'icône d'installation dans la barre d'adresse (🔽)
-3. Suivez les instructions d'installation
+2. Cliquez sur l'icône d'installation dans la barre d'adresse
 
 ### Sur Android
 
 1. Ouvrez l'application dans Chrome
-2. Appuyez sur "Ajouter à l'écran d'accueil"
-3. Suivez les instructions d'installation
-
-### Sur iOS
-
-1. Ouvrez l'application dans Safari
-2. Appuyez sur le bouton Partager (📤)
-3. Sélectionnez "Sur l'écran d'accueil"
-4. Confirmez l'installation
-
-## 🧪 Test de la PWA
-
-Pour tester les fonctionnalités PWA :
-
-1. **Mode hors-ligne** :
-   - Ouvrez les DevTools (F12)
-   - Allez dans l'onglet "Network"
-   - Activez "Offline"
-   - L'application devrait continuer à fonctionner
-
-2. **Mise en cache** :
-   - Les ressources sont automatiquement mises en cache
-   - Les appels API sont mis en cache pour 24h
-   - Vérifiez dans DevTools > Application > Cache Storage
-
-3. **Mise à jour** :
-   - L'application se met à jour automatiquement
-   - Une notification apparaît lors des mises à jour
-
-## 🛠️ Technologies utilisées
-
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
-- Zustand (State management)
-- Marked (Markdown parsing)
-- Lucide React (Icons)
-- PWA (vite-plugin-pwa)
-
-## 📝 Configuration
-
-### Manifest PWA
-
-Le fichier `manifest.json` configure l'apparence et le comportement de l'application installée :
-
-```json
-{
-  "name": "AI Chat App",
-  "short_name": "AI Chat",
-  "description": "Application de chat avec différentes IAs",
-  "theme_color": "#0A0A0A",
-  "background_color": "#0A0A0A",
-  "display": "standalone"
-}
-```
-
-### Service Worker
-
-Le service worker est généré automatiquement par `vite-plugin-pwa` et gère :
-- La mise en cache des ressources
-- Le fonctionnement hors-ligne
-- Les stratégies de cache pour les API
-- Les mises à jour automatiques
+2. Appuyez sur l'icone permettant d'ajouter le site en PWA
 
 ## 📄 License
 

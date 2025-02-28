@@ -88,7 +88,7 @@ export function useFileSystem(projectId?: string): FileSystemState {
 
   // Vérifier si l'application est en mode PWA
   useEffect(() => {
-    const isPWACheck = 
+    const isPWACheck =
       window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as Navigator).standalone ||
       document.referrer.includes('android-app://');
@@ -102,7 +102,7 @@ export function useFileSystem(projectId?: string): FileSystemState {
         try {
           const handle = currentProject.directoryHandle as FileSystemDirectoryHandle;
           const permissionState = await handle.queryPermission?.({ mode: 'readwrite' });
-          
+
           if (permissionState === 'granted') {
             setDirectoryHandle(handle);
             setHasFileSystemAccess(true);
@@ -136,14 +136,25 @@ export function useFileSystem(projectId?: string): FileSystemState {
   }, [currentProject?.directoryHandle, projectId, setProjectDirectory]);
 
   // Construire l'arborescence des fichiers
+  // Dans useFileSystem.ts
+
   const buildFileTree = async (handle: FileSystemDirectoryHandle, path: string = ''): Promise<any> => {
     const tree: any = {};
-    
+
+    // Récupérer toutes les entrées dans un tableau
+    const entries: FileSystemHandle[] = [];
     for await (const entry of handle.values()) {
+      entries.push(entry);
+    }
+
+    // Trier les entrées par ordre alphabétique
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    for (const entry of entries) {
       const entryPath = path ? `${path}/${entry.name}` : entry.name;
-      
+
       if (gitIgnoredFiles.has(entryPath)) continue;
-      
+
       if (entry.kind === 'directory') {
         const dirHandle = await handle.getDirectoryHandle(entry.name);
         tree[entry.name] = await buildFileTree(dirHandle, entryPath);
@@ -151,9 +162,10 @@ export function useFileSystem(projectId?: string): FileSystemState {
         tree[entry.name] = entryPath;
       }
     }
-    
+
     return tree;
   };
+
 
   // Charger et parser le .gitignore
   const loadGitIgnore = async (handle: FileSystemDirectoryHandle) => {
@@ -161,12 +173,12 @@ export function useFileSystem(projectId?: string): FileSystemState {
       const gitignoreHandle = await handle.getFileHandle('.gitignore');
       const file = await gitignoreHandle.getFile();
       const content = await file.text();
-      
+
       const patterns = content
         .split('\n')
         .map(line => line.trim())
         .filter(line => line && !line.startsWith('#'));
-      
+
       const ignored = new Set<string>();
       setGitIgnoredFiles(ignored);
     } catch {
@@ -177,7 +189,7 @@ export function useFileSystem(projectId?: string): FileSystemState {
   // Mettre à jour les stats de tous les fichiers
   const updateAllFileStats = async (handle: FileSystemDirectoryHandle, path: string = '') => {
     const stats: Record<string, { size: number; lastModified: number; type: string }> = {};
-    
+
     const processEntry = async (entry: FileSystemHandle, entryPath: string) => {
       if (entry.kind === 'file') {
         const fileHandle = entry as FileSystemFileHandle;
@@ -195,7 +207,7 @@ export function useFileSystem(projectId?: string): FileSystemState {
         }
       }
     };
-    
+
     await processEntry(handle, path);
     setFileStats(stats);
   };
@@ -224,28 +236,28 @@ export function useFileSystem(projectId?: string): FileSystemState {
 
     const results: string[] = [];
     const searchTerm = query.toLowerCase();
-    
+
     const searchInDirectory = async (handle: FileSystemDirectoryHandle, path: string = '') => {
       for await (const entry of handle.values()) {
         const entryPath = path ? `${path}/${entry.name}` : entry.name;
-        
+
         if (gitIgnoredFiles.has(entryPath)) continue;
-        
+
         if (entry.name.toLowerCase().includes(searchTerm)) {
           results.push(entryPath);
         }
-        
+
         if (entry.kind === 'directory') {
           const dirHandle = await handle.getDirectoryHandle(entry.name);
           await searchInDirectory(dirHandle, entryPath);
         }
       }
     };
-    
+
     if (directoryHandle) {
       await searchInDirectory(directoryHandle);
     }
-    
+
     setSearchResults(results);
   };
 
@@ -276,7 +288,7 @@ export function useFileSystem(projectId?: string): FileSystemState {
   // Copier un fichier ou dossier
   const copyEntry = async (sourcePath: string, destPath: string) => {
     const sourceHandle = await getHandleFromPath(sourcePath);
-    
+
     if (sourceHandle.kind === 'file') {
       const content = await readFileContent(sourcePath);
       await createFile(destPath, content);
@@ -286,10 +298,10 @@ export function useFileSystem(projectId?: string): FileSystemState {
         targetPath: string
       ) => {
         await createDirectory(targetPath);
-        
+
         for await (const entry of sourceHandle.values()) {
           const newPath = `${targetPath}/${entry.name}`;
-          
+
           if (entry.kind === 'file') {
             const fileHandle = await sourceHandle.getFileHandle(entry.name);
             const content = await (await fileHandle.getFile()).text();
@@ -313,14 +325,20 @@ export function useFileSystem(projectId?: string): FileSystemState {
 
   // Obtenir un handle à partir d'un chemin
   const getHandleFromPath = async (path: string): Promise<FileSystemHandle> => {
-    if (!directoryHandle) throw new Error('Pas d\'accès au système de fichiers');
+    if (!directoryHandle) throw new Error("Pas d'accès au système de fichiers");
 
-    const parts = path.split('/').filter(Boolean);
+    let parts = path.split('/').filter(Boolean);
+
+    // Si la première partie du chemin correspond au nom du dossier autorisé, on l'enlève
+    if (parts[0] === directoryHandle.name) {
+      parts.shift();
+    }
+
     let currentHandle: FileSystemHandle = directoryHandle;
 
     for (const part of parts) {
-      if (currentHandle.kind !== 'directory') {
-        throw new Error('Chemin invalide');
+      if (currentHandle.kind !== "directory") {
+        throw new Error("Chemin invalide");
       }
       const dirHandle = currentHandle as FileSystemDirectoryHandle;
       const isLastPart = part === parts[parts.length - 1];
@@ -337,6 +355,7 @@ export function useFileSystem(projectId?: string): FileSystemState {
 
     return currentHandle;
   };
+
 
   // Lire le contenu d'un fichier
   const readFileContent = async (path: string): Promise<string> => {
@@ -438,18 +457,19 @@ export function useFileSystem(projectId?: string): FileSystemState {
 
   // Observer les changements de fichiers
   const watchFileChanges = useCallback((callback: (path: string) => void) => {
+    // Si un watcher existe déjà, on le nettoie
     if (fileWatcher) {
       clearInterval(fileWatcher);
     }
 
     const watcherId = window.setInterval(async () => {
       if (!directoryHandle) return;
-      
+
       try {
         const newTree = await buildFileTree(directoryHandle);
         const stringifiedOldTree = JSON.stringify(fileTree);
         const stringifiedNewTree = JSON.stringify(newTree);
-        
+
         if (stringifiedOldTree !== stringifiedNewTree) {
           setFileTree(newTree);
           await updateAllFileStats(directoryHandle);
@@ -467,25 +487,26 @@ export function useFileSystem(projectId?: string): FileSystemState {
         clearInterval(watcherId);
       }
     };
-  }, [directoryHandle, fileTree, rootDirectory]);
+  }, [directoryHandle, rootDirectory]);
+
 
   // Demander l'accès au système de fichiers
   const requestFileSystemAccess = async () => {
     try {
       setIsLoading(true);
-      
+
       const handle = await window.showDirectoryPicker({
         mode: 'readwrite'
       });
-      
+
       setDirectoryHandle(handle);
       setHasFileSystemAccess(true);
       setRootDirectory(handle.name);
-      
+
       if (projectId) {
         setProjectDirectory(projectId, handle);
       }
-      
+
       const tree = await buildFileTree(handle);
       setFileTree(tree);
       await loadGitIgnore(handle);

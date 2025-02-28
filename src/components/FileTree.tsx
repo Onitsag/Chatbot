@@ -119,29 +119,29 @@ export function FileTree({
   const renderFileEntry = (name: string, path: string) => (
     <div
       key={path}
-      className={`group flex items-center px-2 py-1.5 hover:bg-gray-800/50 rounded-md cursor-pointer transition-colors ${
-        dropTarget === path ? 'bg-blue-500/10 border border-blue-500/50' : ''
-      }`}
+      className={`group flex items-center px-2 py-1.5 hover:bg-gray-800/50 rounded-md cursor-pointer transition-colors ${dropTarget === path ? 'bg-blue-500/10 border border-blue-500/50' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
         onFileSelect(path);
       }}
       onContextMenu={(e) => handleContextMenu(e, path, false)}
-      draggable
-      onDragStart={(e) => handleDragStart(e, path)}
-      onDragOver={(e) => handleDragOver(e, path)}
-      onDrop={(e) => handleDrop(e, path)}
     >
       <input
         type="checkbox"
-        className="mr-2 h-3 w-3 rounded border-gray-500 text-blue-500 focus:ring-blue-500/50"
+        className="pointer-events-auto mr-2 h-3 w-3 rounded border-gray-500 text-blue-500 focus:ring-blue-500/50"
         checked={selectedFiles.has(path)}
         onChange={(e) => {
           e.stopPropagation();
+          console.log(`Checkbox FILE (${path}) onChange:`, e.target.checked);
           onFileSelectionChange(path, e.target.checked, false);
         }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log(`Checkbox FILE (${path}) onClick`);
+        }}
       />
+
+
       <File size={14} className="text-gray-400 flex-shrink-0 mr-2" />
       <span className="truncate text-xs text-gray-200">{name}</span>
     </div>
@@ -164,29 +164,30 @@ export function FileTree({
   const renderFolderEntry = (name: string, path: string, content: any, isExpanded: boolean) => (
     <div key={path} className="space-y-0.5">
       <div
-        className={`group flex items-center px-2 py-1.5 hover:bg-gray-800/50 rounded-md cursor-pointer transition-colors ${
-          dropTarget === path ? 'bg-blue-500/10 border border-blue-500/50' : ''
-        }`}
+        className={`group flex items-center px-2 py-1.5 hover:bg-gray-800/50 rounded-md cursor-pointer transition-colors ${dropTarget === path ? 'bg-blue-500/10 border border-blue-500/50' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
           onToggleFolder(path);
         }}
         onContextMenu={(e) => handleContextMenu(e, path, true)}
-        draggable
-        onDragStart={(e) => handleDragStart(e, path)}
-        onDragOver={(e) => handleDragOver(e, path)}
-        onDrop={(e) => handleDrop(e, path)}
       >
         <input
           type="checkbox"
-          className="mr-2 h-3 w-3 rounded border-gray-500 text-blue-500 focus:ring-blue-500/50"
+          className="pointer-events-auto mr-2 h-3 w-3 rounded border-gray-500 text-blue-500 focus:ring-blue-500/50"
           checked={selectedFiles.has(path)}
           onChange={(e) => {
             e.stopPropagation();
+            console.log(`Checkbox FOLDER (${path}) onChange:`, e.target.checked);
             onFileSelectionChange(path, e.target.checked, true);
           }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log(`Checkbox FOLDER (${path}) onClick`);
+          }}
         />
+
+
+
         <ChevronRight
           size={14}
           className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''} mr-1`}
@@ -221,7 +222,7 @@ export function FileTree({
           <h2 className="text-sm font-medium text-gray-300">{rootDirectory}</h2>
         </div>
       )}
-      
+
       {/* Liste des fichiers */}
       <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
         {searchQuery ? (

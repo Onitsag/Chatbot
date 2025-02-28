@@ -37,7 +37,6 @@
 │   ├── types.ts
 │   └── vite-env.d.ts
 ├── .gitignore
-├── arborescence.txt
 ├── eslint.config.js
 ├── index.html
 ├── package.json
@@ -52,22 +51,361 @@
 
 📄 Contenu des fichiers
 
+.gitignore:
+```
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+```
+
+eslint.config.js:
+```
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  { ignores: ['dist'] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  }
+);
+
+```
+
+index.html:
+```
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon-192x192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="description" content="Application de chat avec différentes IAs" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>AI Chat App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+package.json:
+```
+{
+  "name": "ai-chat-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@headlessui/react": "^1.7.18",
+    "@monaco-editor/react": "^4.6.0",
+    "chalk": "^5.4.1",
+    "highlight.js": "^11.9.0",
+    "html2canvas": "^1.4.1",
+    "inquirer": "^12.4.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.344.0",
+    "marked": "^12.0.0",
+    "openai": "^4.28.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "react-swipeable": "^7.0.2",
+    "strip-ansi": "^7.1.0",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.1",
+    "@tailwindcss/typography": "^0.5.10",
+    "@types/leaflet": "^1.9.16",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.18",
+    "eslint": "^9.9.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.11",
+    "globals": "^15.9.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.3.0",
+    "vite": "^5.4.2",
+    "vite-plugin-pwa": "^0.19.2"
+  }
+}
+
+```
+
+postcss.config.js:
+```
+import tailwindcss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
+
+export default {
+  plugins: {
+    tailwindcss,
+    autoprefixer,
+  },
+};
+```
+
+project-bolt-sb1-jzrce3dn.zip:
+```
+[CONTENU NON AFFICHÉ - FICHIER BINAIRE]
+```
+
+public\icon-192x192.png:
+```
+[CONTENU NON AFFICHÉ - FICHIER BINAIRE]
+```
+
+public\icon-512x512.png:
+```
+[CONTENU NON AFFICHÉ - FICHIER BINAIRE]
+```
+
+public\manifest.json:
+```
+{
+    "name": "AI Chat App",
+    "short_name": "AI Chat",
+    "description": "Application de chat avec différentes IAs",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0A0A0A",
+    "theme_color": "#0A0A0A",
+    "icons": [
+      {
+        "src": "/icon-192x192.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/icon-512x512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ]
+  }
+```
+
+README.md:
+```
+# AI Chat App 🤖
+
+Une application de chat moderne et élégante permettant d'interagir avec différents modèles d'IA (GPT-4, Claude, Mistral), avec support PWA pour une installation sur desktop et mobile.
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+
+## ✨ Fonctionnalités
+
+- 💬 Chat avec différents modèles d'IA (GPT-4, Claude, Mistral)
+- 📱 Progressive Web App (PWA) installable
+- 🌙 Thème sombre natif
+- 📂 Gestion de projets et fichiers
+- 🖼️ Support des images avec description automatique
+- 💾 Sauvegarde locale des conversations
+- ⚡ Streaming des réponses en temps réel
+- 📍 Fonctionne hors-ligne
+- 🔄 Mise à jour automatique
+
+## 🚀 Installation
+
+1. Clonez le repository :
+```bash
+git clone https://github.com/Onitsag/Chatbot
+cd Chatbot
+```
+
+2. Installez les dépendances :
+```bash
+npm install
+```
+
+3. Créez un fichier `.env` à la racine du projet avec vos clés API :
+```env
+VITE_OPENAI_API_KEY=votre_clé_openai
+VITE_ANTHROPIC_API_KEY=votre_clé_anthropic
+VITE_MISTRAL_API_KEY=votre_clé_mistral
+```
+
+4. Lancez le serveur de développement :
+```bash
+npm run dev
+```
+
+## 🏗️ Build et déploiement
+
+1. Créez une version de production :
+```bash
+npm run build
+```
+
+2. Testez la version de production localement :
+```bash
+npm run preview
+```
+
+## 📱 Installation PWA
+
+### Sur Desktop (Chrome, Edge, etc.)
+
+1. Ouvrez l'application dans votre navigateur
+2. Cliquez sur l'icône d'installation dans la barre d'adresse (🔽)
+3. Suivez les instructions d'installation
+
+### Sur Android
+
+1. Ouvrez l'application dans Chrome
+2. Appuyez sur "Ajouter à l'écran d'accueil"
+3. Suivez les instructions d'installation
+
+### Sur iOS
+
+1. Ouvrez l'application dans Safari
+2. Appuyez sur le bouton Partager (📤)
+3. Sélectionnez "Sur l'écran d'accueil"
+4. Confirmez l'installation
+
+## 🧪 Test de la PWA
+
+Pour tester les fonctionnalités PWA :
+
+1. **Mode hors-ligne** :
+   - Ouvrez les DevTools (F12)
+   - Allez dans l'onglet "Network"
+   - Activez "Offline"
+   - L'application devrait continuer à fonctionner
+
+2. **Mise en cache** :
+   - Les ressources sont automatiquement mises en cache
+   - Les appels API sont mis en cache pour 24h
+   - Vérifiez dans DevTools > Application > Cache Storage
+
+3. **Mise à jour** :
+   - L'application se met à jour automatiquement
+   - Une notification apparaît lors des mises à jour
+
+## 🛠️ Technologies utilisées
+
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Zustand (State management)
+- Marked (Markdown parsing)
+- Lucide React (Icons)
+- PWA (vite-plugin-pwa)
+
+## 📝 Configuration
+
+### Manifest PWA
+
+Le fichier `manifest.json` configure l'apparence et le comportement de l'application installée :
+
+```json
+{
+  "name": "AI Chat App",
+  "short_name": "AI Chat",
+  "description": "Application de chat avec différentes IAs",
+  "theme_color": "#0A0A0A",
+  "background_color": "#0A0A0A",
+  "display": "standalone"
+}
+```
+
+### Service Worker
+
+Le service worker est généré automatiquement par `vite-plugin-pwa` et gère :
+- La mise en cache des ressources
+- Le fonctionnement hors-ligne
+- Les stratégies de cache pour les API
+- Les mises à jour automatiques
+
+## 📄 License
+
+MIT License - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+```
+
 src\App.tsx:
 ```
-import React, { useEffect } from 'react';
+// src/App.tsx
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
 import { ProjectPanel } from './components/ProjectPanel';
 import { useStore } from './store';
-import { MessageSquare, FolderOpen, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import {
+  MessageSquare,
+  FolderOpen,
+  ChevronLeft,
+  ChevronRight,
+  Settings
+} from 'lucide-react';
 import { SettingsModal } from './components/SettingsModal';
 import { processOfflineMessages } from './utils/processOfflineMessages';
+import { useSwipeable } from 'react-swipeable';
 
 export default function App() {
   const { currentProjectId } = useStore();
-  const [view, setView] = React.useState<'chat' | 'project'>('chat');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [view, setView] = useState<'chat' | 'project'>('chat');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Demander la permission pour les notifications au démarrage
   useEffect(() => {
@@ -96,24 +434,64 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline);
   }, []);
 
+  // Utilisation de react-swipeable pour gérer l'ouverture/fermeture de la sidebar en mobile
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarCollapsed(true);
+      }
+    },
+    onSwipedRight: () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarCollapsed(false);
+      }
+    },
+    trackMouse: true // Pour tester avec la souris
+  });
+
   return (
     <div className="flex h-screen bg-gray-900 text-white">
-      {/* Sidebar principale avec bouton de collapse */}
-      <div className={`fixed left-0 top-0 h-full z-50 transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-16' : 'w-72'}`}>
-        <div className={`flex flex-col w-full h-full bg-gray-900 border-r border-gray-700 ${isSidebarCollapsed ? 'items-center' : ''}`}>
+      {/* Sidebar principale avec swipe (sur mobile) */}
+      <div
+        {...swipeHandlers}
+        className={`fixed left-0 top-0 h-screen overflow-y-auto z-50 transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? 'w-16' : 'w-72'
+        }`}
+      >
+        <div
+          className={`flex flex-col w-full h-full bg-gray-900 border-r border-gray-700 ${
+            isSidebarCollapsed ? 'items-center' : ''
+          }`}
+        >
           {/* Navigation principale */}
-          <div className={`flex p-2 gap-2 border-b border-gray-700 ${isSidebarCollapsed ? 'flex-col' : ''}`}>
+          <div
+            className={`flex p-2 gap-2 border-b border-gray-700 ${
+              isSidebarCollapsed ? 'flex-col' : ''
+            }`}
+          >
             <div className={`flex gap-2 ${isSidebarCollapsed ? 'flex-col' : 'flex-1'}`}>
               <button
                 onClick={() => setView('chat')}
-                className={`flex items-center gap-2 ${isSidebarCollapsed ? 'w-12 h-12 justify-center' : 'flex-1'} px-4 py-2 rounded-lg transition-colors ${view === 'chat' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                className={`flex items-center gap-2 ${
+                  isSidebarCollapsed ? 'w-12 h-12 justify-center' : 'flex-1'
+                } px-4 py-2 rounded-lg transition-colors ${
+                  view === 'chat'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
               >
                 <MessageSquare size={20} />
                 {!isSidebarCollapsed && 'Chat'}
               </button>
               <button
                 onClick={() => setView('project')}
-                className={`flex items-center gap-2 ${isSidebarCollapsed ? 'w-12 h-12 justify-center' : 'flex-1'} px-4 py-2 rounded-lg transition-colors ${view === 'project' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                className={`flex items-center gap-2 ${
+                  isSidebarCollapsed ? 'w-12 h-12 justify-center' : 'flex-1'
+                } px-4 py-2 rounded-lg transition-colors ${
+                  view === 'project'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
               >
                 <FolderOpen size={20} />
                 {!isSidebarCollapsed && 'Projet'}
@@ -121,7 +499,9 @@ export default function App() {
             </div>
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className={`flex items-center justify-center ${isSidebarCollapsed ? 'w-12 h-12' : 'w-12'} text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors`}
+              className={`flex items-center justify-center ${
+                isSidebarCollapsed ? 'w-12 h-12' : 'w-12'
+              } text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors`}
               title="Paramètres"
             >
               <Settings size={20} />
@@ -144,12 +524,8 @@ export default function App() {
       </div>
 
       {/* Contenu principal avec marge à gauche pour la sidebar */}
-      <div className={`flex-1 ${isSidebarCollapsed ? 'ml-16' : 'ml-72'} transition-all duration-300`}>
-        {view === 'chat' ? (
-          <ChatWindow />
-        ) : (
-          <ProjectPanel />
-        )}
+      <div className={`flex-1 ${isSidebarCollapsed ? 'ml-16' : 'ml-72'} transition-all duration-300 overflow-hidden`}>
+        {view === 'chat' ? <ChatWindow /> : <ProjectPanel />}
       </div>
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
@@ -933,7 +1309,7 @@ export function ChatWindow({
   return (
     <div
       ref={chatContainerRef}
-      className="flex flex-col h-full bg-gray-800 relative"
+      className="flex flex-col h-full bg-gray-800 relative overflow-hidden"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -3461,6 +3837,583 @@ export function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps) {
 
 ```
 
+src\hooks\useFileSystem.ts:
+```
+import { useState, useEffect, useCallback } from 'react';
+import { useStore } from '../store';
+
+// Types pour l'API File System Access
+interface FileSystemPermissionDescriptor {
+  mode?: 'read' | 'readwrite';
+}
+
+interface FileSystemHandle {
+  kind: 'file' | 'directory';
+  name: string;
+  queryPermission?: (desc: FileSystemPermissionDescriptor) => Promise<PermissionState>;
+  requestPermission?: (desc: FileSystemPermissionDescriptor) => Promise<PermissionState>;
+}
+
+export interface FileSystemDirectoryHandle extends FileSystemHandle {
+  kind: 'directory';
+  values: () => AsyncIterableIterator<FileSystemHandle>;
+  getDirectoryHandle: (name: string, options?: { create?: boolean }) => Promise<FileSystemDirectoryHandle>;
+  getFileHandle: (name: string, options?: { create?: boolean }) => Promise<FileSystemFileHandle>;
+  removeEntry: (name: string, options?: { recursive?: boolean }) => Promise<void>;
+}
+
+interface FileSystemFileHandle extends FileSystemHandle {
+  kind: 'file';
+  getFile: () => Promise<File>;
+  createWritable: () => Promise<FileSystemWritableFileStream>;
+}
+
+interface FileSystemWritableFileStream extends WritableStream {
+  write: (content: string) => Promise<void>;
+  close: () => Promise<void>;
+}
+
+// Déclaration des APIs manquantes
+declare global {
+  interface Window {
+    showDirectoryPicker: (options?: {
+      mode?: 'read' | 'readwrite'
+    }) => Promise<FileSystemDirectoryHandle>;
+  }
+  interface Navigator {
+    standalone?: boolean;
+  }
+}
+
+interface FileSystemState {
+  isPWA: boolean;
+  hasFileSystemAccess: boolean;
+  fileTree: any;
+  isLoading: boolean;
+  rootDirectory: string;
+  fileStats: Record<string, { size: number; lastModified: number; type: string }>;
+  searchResults: string[];
+  requestFileSystemAccess: () => Promise<void>;
+  readFileContent: (path: string) => Promise<string>;
+  writeFileContent: (path: string, content: string) => Promise<void>;
+  createFile: (path: string, content?: string) => Promise<void>;
+  createDirectory: (path: string) => Promise<void>;
+  deleteEntry: (path: string) => Promise<void>;
+  renameEntry: (oldPath: string, newPath: string) => Promise<void>;
+  refreshFileTree: () => Promise<void>;
+  watchFileChanges: (callback: (path: string) => void) => () => void;
+  searchFiles: (query: string) => Promise<void>;
+  getFileStats: (path: string) => Promise<{ size: number; lastModified: number; type: string }>;
+  moveEntry: (oldPath: string, newPath: string) => Promise<void>;
+  copyEntry: (sourcePath: string, destPath: string) => Promise<void>;
+  getGitIgnoredFiles: () => Promise<Set<string>>;
+  getAllFilesInDirectory: (path: string) => Promise<string[]>;
+}
+
+const REFRESH_INTERVAL = 1000; // 1 seconde
+
+export function useFileSystem(projectId?: string): FileSystemState {
+  const [isPWA, setIsPWA] = useState(false);
+  const [hasFileSystemAccess, setHasFileSystemAccess] = useState(false);
+  const [fileTree, setFileTree] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [directoryHandle, setDirectoryHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [rootDirectory, setRootDirectory] = useState<string>('');
+  const [fileWatcher, setFileWatcher] = useState<number | null>(null);
+  const [fileStats, setFileStats] = useState<Record<string, { size: number; lastModified: number; type: string }>>({});
+  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [gitIgnoredFiles, setGitIgnoredFiles] = useState<Set<string>>(new Set());
+
+  const { projects, setProjectDirectory } = useStore();
+  const currentProject = projectId ? projects.find(p => p.id === projectId) : null;
+
+  // Vérifier si l'application est en mode PWA
+  useEffect(() => {
+    const isPWACheck = 
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as Navigator).standalone ||
+      document.referrer.includes('android-app://');
+    setIsPWA(isPWACheck);
+  }, []);
+
+  // Restaurer le handle du dossier au démarrage
+  useEffect(() => {
+    const restoreDirectoryHandle = async () => {
+      if (currentProject?.directoryHandle) {
+        try {
+          const handle = currentProject.directoryHandle as FileSystemDirectoryHandle;
+          const permissionState = await handle.queryPermission?.({ mode: 'readwrite' });
+          
+          if (permissionState === 'granted') {
+            setDirectoryHandle(handle);
+            setHasFileSystemAccess(true);
+            setRootDirectory(handle.name);
+            const tree = await buildFileTree(handle);
+            setFileTree(tree);
+            await loadGitIgnore(handle);
+            await updateAllFileStats(handle);
+          } else {
+            const newPermission = await handle.requestPermission?.({ mode: 'readwrite' });
+            if (newPermission === 'granted') {
+              setDirectoryHandle(handle);
+              setHasFileSystemAccess(true);
+              setRootDirectory(handle.name);
+              const tree = await buildFileTree(handle);
+              setFileTree(tree);
+              await loadGitIgnore(handle);
+              await updateAllFileStats(handle);
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors de la restauration du handle:', error);
+          if (projectId) {
+            setProjectDirectory(projectId, null);
+          }
+        }
+      }
+    };
+
+    restoreDirectoryHandle();
+  }, [currentProject?.directoryHandle, projectId, setProjectDirectory]);
+
+  // Construire l'arborescence des fichiers
+  const buildFileTree = async (handle: FileSystemDirectoryHandle, path: string = ''): Promise<any> => {
+    const tree: any = {};
+    
+    for await (const entry of handle.values()) {
+      const entryPath = path ? `${path}/${entry.name}` : entry.name;
+      
+      if (gitIgnoredFiles.has(entryPath)) continue;
+      
+      if (entry.kind === 'directory') {
+        const dirHandle = await handle.getDirectoryHandle(entry.name);
+        tree[entry.name] = await buildFileTree(dirHandle, entryPath);
+      } else {
+        tree[entry.name] = entryPath;
+      }
+    }
+    
+    return tree;
+  };
+
+  // Charger et parser le .gitignore
+  const loadGitIgnore = async (handle: FileSystemDirectoryHandle) => {
+    try {
+      const gitignoreHandle = await handle.getFileHandle('.gitignore');
+      const file = await gitignoreHandle.getFile();
+      const content = await file.text();
+      
+      const patterns = content
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line && !line.startsWith('#'));
+      
+      const ignored = new Set<string>();
+      setGitIgnoredFiles(ignored);
+    } catch {
+      setGitIgnoredFiles(new Set());
+    }
+  };
+
+  // Mettre à jour les stats de tous les fichiers
+  const updateAllFileStats = async (handle: FileSystemDirectoryHandle, path: string = '') => {
+    const stats: Record<string, { size: number; lastModified: number; type: string }> = {};
+    
+    const processEntry = async (entry: FileSystemHandle, entryPath: string) => {
+      if (entry.kind === 'file') {
+        const fileHandle = entry as FileSystemFileHandle;
+        const file = await fileHandle.getFile();
+        stats[entryPath] = {
+          size: file.size,
+          lastModified: file.lastModified,
+          type: file.type || 'text/plain'
+        };
+      } else {
+        const dirHandle = entry as FileSystemDirectoryHandle;
+        for await (const childEntry of dirHandle.values()) {
+          const childPath = entryPath ? `${entryPath}/${childEntry.name}` : childEntry.name;
+          await processEntry(childEntry, childPath);
+        }
+      }
+    };
+    
+    await processEntry(handle, path);
+    setFileStats(stats);
+  };
+
+  // Obtenir les stats d'un fichier
+  const getFileStats = async (path: string) => {
+    const handle = await getHandleFromPath(path);
+    if (handle.kind !== 'file') {
+      throw new Error('Ce n\'est pas un fichier');
+    }
+    const fileHandle = handle as FileSystemFileHandle;
+    const file = await fileHandle.getFile();
+    return {
+      size: file.size,
+      lastModified: file.lastModified,
+      type: file.type || 'text/plain'
+    };
+  };
+
+  // Rechercher des fichiers
+  const searchFiles = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results: string[] = [];
+    const searchTerm = query.toLowerCase();
+    
+    const searchInDirectory = async (handle: FileSystemDirectoryHandle, path: string = '') => {
+      for await (const entry of handle.values()) {
+        const entryPath = path ? `${path}/${entry.name}` : entry.name;
+        
+        if (gitIgnoredFiles.has(entryPath)) continue;
+        
+        if (entry.name.toLowerCase().includes(searchTerm)) {
+          results.push(entryPath);
+        }
+        
+        if (entry.kind === 'directory') {
+          const dirHandle = await handle.getDirectoryHandle(entry.name);
+          await searchInDirectory(dirHandle, entryPath);
+        }
+      }
+    };
+    
+    if (directoryHandle) {
+      await searchInDirectory(directoryHandle);
+    }
+    
+    setSearchResults(results);
+  };
+
+  // Obtenir tous les fichiers dans un dossier
+  const getAllFilesInDirectory = async (path: string): Promise<string[]> => {
+    const handle = await getHandleFromPath(path);
+    if (handle.kind !== 'directory') {
+      throw new Error('Ce n\'est pas un dossier');
+    }
+
+    const files: string[] = [];
+    const processDirectory = async (dirHandle: FileSystemDirectoryHandle, currentPath: string) => {
+      for await (const entry of dirHandle.values()) {
+        const entryPath = `${currentPath}/${entry.name}`;
+        if (entry.kind === 'file') {
+          files.push(entryPath);
+        } else {
+          const childHandle = await dirHandle.getDirectoryHandle(entry.name);
+          await processDirectory(childHandle, entryPath);
+        }
+      }
+    };
+
+    await processDirectory(handle as FileSystemDirectoryHandle, path);
+    return files;
+  };
+
+  // Copier un fichier ou dossier
+  const copyEntry = async (sourcePath: string, destPath: string) => {
+    const sourceHandle = await getHandleFromPath(sourcePath);
+    
+    if (sourceHandle.kind === 'file') {
+      const content = await readFileContent(sourcePath);
+      await createFile(destPath, content);
+    } else {
+      const copyDirectory = async (
+        sourceHandle: FileSystemDirectoryHandle,
+        targetPath: string
+      ) => {
+        await createDirectory(targetPath);
+        
+        for await (const entry of sourceHandle.values()) {
+          const newPath = `${targetPath}/${entry.name}`;
+          
+          if (entry.kind === 'file') {
+            const fileHandle = await sourceHandle.getFileHandle(entry.name);
+            const content = await (await fileHandle.getFile()).text();
+            await createFile(newPath, content);
+          } else {
+            const dirHandle = await sourceHandle.getDirectoryHandle(entry.name);
+            await copyDirectory(dirHandle, newPath);
+          }
+        }
+      };
+
+      await copyDirectory(sourceHandle as FileSystemDirectoryHandle, destPath);
+    }
+  };
+
+  // Déplacer un fichier ou dossier
+  const moveEntry = async (oldPath: string, newPath: string) => {
+    await copyEntry(oldPath, newPath);
+    await deleteEntry(oldPath);
+  };
+
+  // Obtenir un handle à partir d'un chemin
+  const getHandleFromPath = async (path: string): Promise<FileSystemHandle> => {
+    if (!directoryHandle) throw new Error('Pas d\'accès au système de fichiers');
+
+    const parts = path.split('/').filter(Boolean);
+    let currentHandle: FileSystemHandle = directoryHandle;
+
+    for (const part of parts) {
+      if (currentHandle.kind !== 'directory') {
+        throw new Error('Chemin invalide');
+      }
+      const dirHandle = currentHandle as FileSystemDirectoryHandle;
+      const isLastPart = part === parts[parts.length - 1];
+      if (isLastPart) {
+        try {
+          currentHandle = await dirHandle.getFileHandle(part);
+        } catch {
+          currentHandle = await dirHandle.getDirectoryHandle(part);
+        }
+      } else {
+        currentHandle = await dirHandle.getDirectoryHandle(part);
+      }
+    }
+
+    return currentHandle;
+  };
+
+  // Lire le contenu d'un fichier
+  const readFileContent = async (path: string): Promise<string> => {
+    const handle = await getHandleFromPath(path);
+    if (handle.kind !== 'file') {
+      throw new Error('Ce n\'est pas un fichier');
+    }
+    const fileHandle = handle as FileSystemFileHandle;
+    const file = await fileHandle.getFile();
+    return await file.text();
+  };
+
+  // Écrire dans un fichier
+  const writeFileContent = async (path: string, content: string): Promise<void> => {
+    const handle = await getHandleFromPath(path);
+    if (handle.kind !== 'file') {
+      throw new Error('Ce n\'est pas un fichier');
+    }
+    const fileHandle = handle as FileSystemFileHandle;
+    const writable = await fileHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+    await refreshFileTree();
+    await updateAllFileStats(directoryHandle!);
+  };
+
+  // Créer un nouveau fichier
+  const createFile = async (path: string, content: string = ''): Promise<void> => {
+    if (!directoryHandle) throw new Error('Pas d\'accès au système de fichiers');
+
+    const parts = path.split('/');
+    const fileName = parts.pop()!;
+    let currentHandle: FileSystemDirectoryHandle = directoryHandle;
+
+    for (const part of parts) {
+      if (part) {
+        currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+      }
+    }
+
+    const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+    await refreshFileTree();
+    await updateAllFileStats(directoryHandle);
+  };
+
+  // Créer un nouveau dossier
+  const createDirectory = async (path: string): Promise<void> => {
+    if (!directoryHandle) throw new Error('Pas d\'accès au système de fichiers');
+
+    const parts = path.split('/');
+    let currentHandle: FileSystemDirectoryHandle = directoryHandle;
+
+    for (const part of parts) {
+      if (part) {
+        currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+      }
+    }
+
+    await refreshFileTree();
+    await updateAllFileStats(directoryHandle);
+  };
+
+  // Supprimer un fichier ou dossier
+  const deleteEntry = async (path: string): Promise<void> => {
+    if (!directoryHandle) throw new Error('Pas d\'accès au système de fichiers');
+
+    const parts = path.split('/');
+    const name = parts.pop()!;
+    let currentHandle: FileSystemDirectoryHandle = directoryHandle;
+
+    for (const part of parts) {
+      if (part) {
+        currentHandle = await currentHandle.getDirectoryHandle(part);
+      }
+    }
+
+    await currentHandle.removeEntry(name, { recursive: true });
+    await refreshFileTree();
+    await updateAllFileStats(directoryHandle);
+  };
+
+  // Renommer un fichier ou dossier
+  const renameEntry = async (oldPath: string, newPath: string): Promise<void> => {
+    await copyEntry(oldPath, newPath);
+    await deleteEntry(oldPath);
+    await refreshFileTree();
+    await updateAllFileStats(directoryHandle!);
+  };
+
+  // Rafraîchir l'arborescence
+  const refreshFileTree = async () => {
+    if (!directoryHandle) return;
+    const tree = await buildFileTree(directoryHandle);
+    setFileTree(tree);
+  };
+
+  // Observer les changements de fichiers
+  const watchFileChanges = useCallback((callback: (path: string) => void) => {
+    if (fileWatcher) {
+      clearInterval(fileWatcher);
+    }
+
+    const watcherId = window.setInterval(async () => {
+      if (!directoryHandle) return;
+      
+      try {
+        const newTree = await buildFileTree(directoryHandle);
+        const stringifiedOldTree = JSON.stringify(fileTree);
+        const stringifiedNewTree = JSON.stringify(newTree);
+        
+        if (stringifiedOldTree !== stringifiedNewTree) {
+          setFileTree(newTree);
+          await updateAllFileStats(directoryHandle);
+          callback(rootDirectory);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la surveillance des fichiers:', error);
+      }
+    }, REFRESH_INTERVAL);
+
+    setFileWatcher(watcherId);
+
+    return () => {
+      if (watcherId) {
+        clearInterval(watcherId);
+      }
+    };
+  }, [directoryHandle, fileTree, rootDirectory]);
+
+  // Demander l'accès au système de fichiers
+  const requestFileSystemAccess = async () => {
+    try {
+      setIsLoading(true);
+      
+      const handle = await window.showDirectoryPicker({
+        mode: 'readwrite'
+      });
+      
+      setDirectoryHandle(handle);
+      setHasFileSystemAccess(true);
+      setRootDirectory(handle.name);
+      
+      if (projectId) {
+        setProjectDirectory(projectId, handle);
+      }
+      
+      const tree = await buildFileTree(handle);
+      setFileTree(tree);
+      await loadGitIgnore(handle);
+      await updateAllFileStats(handle);
+    } catch (error) {
+      console.error('Erreur lors de la demande d\'accès aux fichiers:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Nettoyer le watcher quand le composant est démonté
+  useEffect(() => {
+    return () => {
+      if (fileWatcher) {
+        clearInterval(fileWatcher);
+      }
+    };
+  }, [fileWatcher]);
+
+  // Obtenir la liste des fichiers ignorés par git
+  const getGitIgnoredFiles = async () => {
+    return gitIgnoredFiles;
+  };
+
+  return {
+    isPWA,
+    hasFileSystemAccess,
+    fileTree,
+    isLoading,
+    rootDirectory,
+    fileStats,
+    searchResults,
+    requestFileSystemAccess,
+    readFileContent,
+    writeFileContent,
+    createFile,
+    createDirectory,
+    deleteEntry,
+    renameEntry,
+    refreshFileTree,
+    watchFileChanges,
+    searchFiles,
+    getFileStats,
+    moveEntry,
+    copyEntry,
+    getGitIgnoredFiles,
+    getAllFilesInDirectory
+  };
+}
+```
+
+src\hooks\useKeyboardShortcuts.ts:
+```
+import { useEffect } from 'react';
+import { useStore } from '../store';
+
+export function useKeyboardShortcuts() {
+  const { addChat, addProject } = useStore();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K : Recherche globale
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        // TODO: Ouvrir la recherche globale
+      }
+
+      // Ctrl/Cmd + N : Nouveau chat
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        // TODO: Ouvrir le modal de création de chat
+      }
+
+      // Ctrl/Cmd + P : Nouveau projet
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        // TODO: Ouvrir le modal de création de projet
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [addChat, addProject]);
+}
+```
+
 src\index.css:
 ```
 @tailwind base;
@@ -3544,5 +4497,1186 @@ body {
 .transition-smooth {
   @apply transition-all duration-200 ease-in-out;
 }
+```
+
+src\main.tsx:
+```
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
+
+```
+
+src\services\ai.ts:
+```
+import OpenAI from 'openai';
+import { AIModel } from '../types';
+
+const AI_MODELS: AIModel[] = [
+  {
+    id: 'gpt',
+    name: 'GPT-4o',
+    apiEndpoint: 'https://api.openai.com/v1/chat/completions',
+    defaultModel: 'gpt-4o',
+    supportsStreaming: true,
+    supportsFunctionCalling: true
+  },
+  {
+    id: 'claude',
+    name: 'Claude',
+    apiEndpoint: 'https://api.anthropic.com/v1/messages',
+    defaultModel: 'claude-3-opus-20240229',
+    supportsStreaming: false,
+    supportsFunctionCalling: false
+  },
+  {
+    id: 'mistral',
+    name: 'Mistral',
+    apiEndpoint: 'https://api.mistral.ai/v1/chat/completions',
+    defaultModel: 'mistral-large-latest',
+    supportsStreaming: false,
+    supportsFunctionCalling: false
+  }
+];
+
+export async function generateImageDescription(apiKey: string, base64Image: string): Promise<string> {
+  if (!apiKey) {
+    throw new Error("Clé API GPT-4 requise pour l'analyse d'images");
+  }
+
+  const openai = new OpenAI({ 
+    apiKey,
+    dangerouslyAllowBrowser: true
+  });
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { 
+              type: "text", 
+              text: `Décris cette image de manière très précise. La première phrase est obligatoirement une phrase concise qui résume l'image, commençant par "Tu vois une image qui représente" et de moins de 15 mots. Ensuite tu décris très précisément l'image. S'il y a du texte d'indiqué, tu le répète entièrement. Si l'image est uniquement un screen d'un fichier de code, après la première phrase de ta réponse tu indiqueras uniquement "Code :" suivi de l'entièreté du code affiché sur l'image.` 
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: base64Image
+              }
+            }
+          ],
+        },
+      ],
+      max_tokens: 150,
+    });
+
+    return response.choices[0]?.message?.content || 'Description non disponible';
+  } catch (error: any) {
+    console.error('Erreur lors de la génération de la description:', error);
+    throw new Error(`Erreur lors de l'analyse de l'image: ${error.message}`);
+  }
+}
+
+// Définition des outils avec additionalProperties: false
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "get_current_time",
+      description: "Get the current time in a specific timezone",
+      parameters: {
+        type: "object",
+        properties: {
+          timezone: {
+            type: "string",
+            description: "The timezone to get the time for (e.g. 'Europe/Paris')"
+          }
+        },
+        required: ["timezone"],
+        additionalProperties: false
+      },
+      strict: true
+    }
+  }
+];
+
+function get_current_time(timezone: string): string {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('fr-FR', { 
+      timeZone: timezone, 
+      timeStyle: 'medium', 
+      dateStyle: 'long' 
+    });
+    return formatter.format(now);
+  } catch (e) {
+    return "Fuseau horaire invalide.";
+  }
+}
+
+/**
+ * streamResponse
+ * 
+ * - Retourne un générateur asynchrone qui envoie les morceaux de texte renvoyés par GPT en streaming.
+ * - Accumule également les appels de fonction (function calling) dans finalToolCalls.
+ * - À la fin du flux, finalToolCalls contiendra la liste des appels de fonction complétés (arguments JSON reconstitués).
+ */
+export async function* streamResponse(
+  model: AIModel,
+  apiKey: string,
+  messages: { role: string; content: string }[],
+  finalToolCalls: Record<number, { name: string; arguments: string }>
+) {
+  if (model.id !== 'gpt') {
+    throw new Error('Le streaming n\'est supporté que pour GPT-4');
+  }
+
+  const openai = new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true
+  });
+
+  const stream = await openai.chat.completions.create({
+    model: model.defaultModel,
+    messages: messages.map(m => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content
+    })),
+    stream: true,
+    tools: tools,
+    store: true,
+  });
+
+  for await (const chunk of stream) {
+    const choice = chunk.choices[0];
+    
+    // Si on reçoit du texte
+    if (choice?.delta?.content) {
+      const contentPart = choice.delta.content;
+      console.log(`Chunk: ${contentPart}`);
+      yield contentPart;
+    }
+
+    // Si on reçoit un (ou plusieurs) appels de fonction
+    if (choice?.delta?.tool_calls) {
+      const calls = choice.delta.tool_calls;
+      const callArray = Array.isArray(calls) ? calls : [calls];
+      for (const singleCall of callArray) {
+        const index = singleCall.index;
+        if (index === undefined) continue;
+
+        // Initialisation de la structure de stockage si besoin
+        if (!finalToolCalls[index]) {
+          finalToolCalls[index] = {
+            name: singleCall?.function?.name || '',
+            arguments: singleCall?.function?.arguments || ''
+          };
+        } else {
+          // Accumulation des arguments (ils arrivent en fragments)
+          finalToolCalls[index].arguments += singleCall?.function?.arguments || '';
+        }
+
+        // Mise à jour du nom de fonction si on le reçoit plus tard
+        if (!finalToolCalls[index].name && singleCall?.function?.name) {
+          finalToolCalls[index].name = singleCall.function.name;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Exécute un éventuel appel de fonction en local,
+ * puis renvoie la réponse finale. 
+ */
+export async function handleFunctionCallsAndRespond(
+  model: AIModel,
+  apiKey: string,
+  conversationSoFar: { role: string; content: string }[],
+  finalToolCalls: Record<number, { name: string; arguments: string }>
+): Promise<string> {
+  console.log('DEBUG: handleFunctionCallsAndRespond -> finalToolCalls =', finalToolCalls);
+
+  // On exécute pour chaque fonction identifiée
+  const callsResults: string[] = [];
+  for (const indexString in finalToolCalls) {
+    const call = finalToolCalls[indexString];
+    console.log(`DEBUG: Traitement de l'appel de fonction index=${indexString}, name=${call.name}, args="${call.arguments}"`);
+    
+    if (call.name === 'get_current_time') {
+      try {
+        const params = JSON.parse(call.arguments || '{}');
+        const timezone = params.timezone || 'UTC';
+        const result = get_current_time(timezone);
+        callsResults.push(`Pour le fuseau "${timezone}", l'heure est: ${result}`);
+        console.log(`DEBUG: Résultat get_current_time("${timezone}") = ${result}`);
+      } catch (e) {
+        const errMsg = `Erreur de parsing pour get_current_time: ${e}`;
+        callsResults.push(errMsg);
+        console.log('DEBUG:', errMsg);
+      }
+    } else {
+      console.log(`DEBUG: Appel de fonction non géré: ${call.name}`);
+    }
+  }
+
+  if (callsResults.length === 0) {
+    console.log('DEBUG: Aucune fonction valide n’a été appelée ou finalisée (callsResults vide).');
+    return '';
+  }
+
+  const newAssistantMessage = `
+Voici les résultats des fonctions appelées :
+
+${callsResults.join('\n')}
+
+Tu dois IMPÉRATIVEMENT intégrer ces informations (sans t'en excuser ou les ignorer) dans ta réponse finale. 
+`.trim();
+
+  console.log('DEBUG: Envoi d’un nouveau message (ROLE=system) à GPT avec le résultat des fonctions:\n', newAssistantMessage);
+
+  const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+
+  // Remplacez le rôle "assistant" par "system" pour imposer plus fortement la directive 
+  const newConversation = [
+    ...conversationSoFar,
+    { role: 'system', content: newAssistantMessage }
+  ];
+
+  const completion = await openai.chat.completions.create({
+    model: model.defaultModel,
+    messages: newConversation,
+    store: true,
+    stream: false
+  });
+
+  const finalContent = completion.choices[0]?.message?.content || '';
+  console.log('DEBUG: GPT renvoie (après fonction) =', finalContent);
+  return finalContent;
+}
+
+
+/**
+ * sendMessage
+ * 
+ * Fonction pour l'appel unique (sans streaming) ou usage standard. 
+ * Si useStreaming = true, la fonction n'est plus appelée
+ * (vous utilisez handleSubmit dans ChatWindow qui appelle streamResponse).
+ */
+export async function sendMessage(
+  model: AIModel,
+  apiKey: string,
+  messages: { role: string; content: string; selectedImages?: string[] }[],
+  chatImages?: { id: string; description: string }[],
+  useStreaming: boolean = false
+) {
+  if (!apiKey) {
+    throw new Error(`Veuillez fournir une clé API pour ${model.name}`);
+  }
+
+  const processedMessages = messages.map(msg => {
+    if (msg.selectedImages?.length && chatImages) {
+      let content = msg.content;
+      msg.selectedImages.forEach(imgId => {
+        const image = chatImages.find(img => img.id === imgId);
+        if (image) {
+          const imageRef = `[Image ${image.id}]`;
+          content = content.replace(imageRef, `[Image: ${image.description}]`);
+        }
+      });
+      return { role: msg.role, content };
+    }
+    return { role: msg.role, content: msg.content };
+  });
+
+  if (useStreaming && model.supportsStreaming) {
+    // On n'utilise plus sendMessage en streaming dans l'exemple,
+    // handleSubmit de ChatWindow.tsx appelle directement streamResponse.
+    // Vous pourriez néanmoins l'adapter si besoin.
+    throw new Error('Le streaming direct n’est plus géré ici. Utilisez streamResponse et handleFunctionCallsAndRespond.');
+  }
+
+  switch (model.id) {
+    case 'gpt': {
+      const openai = new OpenAI({
+        apiKey,
+        dangerouslyAllowBrowser: true
+      });
+      const response = await openai.chat.completions.create({
+        model: model.defaultModel,
+        messages: processedMessages.map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content
+        })),
+        tools: model.supportsFunctionCalling ? tools : undefined,
+        store: true,
+        stream: false,
+      });
+      return response.choices[0]?.message?.content || '';
+    }
+    case 'claude': {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      };
+      const body = {
+        model: model.defaultModel,
+        messages: processedMessages.map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content
+        }))
+      };
+      const response = await fetch(model.apiEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || `Erreur avec ${model.name}`);
+      }
+      return data.content[0]?.text || '';
+    }
+    case 'mistral': {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+      const body = {
+        model: model.defaultModel,
+        messages: processedMessages.map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content
+        }))
+      };
+      const response = await fetch(model.apiEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || `Erreur avec ${model.name}`);
+      }
+      return data.choices[0]?.message?.content || '';
+    }
+    default:
+      throw new Error('Modèle d\'IA non supporté');
+  }
+}
+
+export { AI_MODELS };
+
+```
+
+src\store.ts:
+```
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { AppState, Chat, AIModel, Project, ProjectFile, ChatImage, Message } from './types';
+
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      chats: [],
+      projects: [],
+      currentChatId: null,
+      currentProjectId: null,
+      apiKeys: {},
+
+      addChat: (model: AIModel, projectId?: string) => {
+        const newChat: Chat = {
+          id: crypto.randomUUID(),
+          title: 'Nouvelle conversation',
+          messages: [],
+          model,
+          projectId,
+          emoji: '💬',
+          images: [],
+          streamingEnabled: true,
+          systemPrompt: '' // ou une valeur par défaut
+        };
+
+        set((state) => ({
+          chats: [...state.chats, newChat],
+          currentChatId: newChat.id
+        }));
+      },
+
+      deleteChat: (id: string) => {
+        set((state) => ({
+          chats: state.chats.filter((chat) => chat.id !== id),
+          currentChatId: state.currentChatId === id ? null : state.currentChatId
+        }));
+      },
+
+      setCurrentChat: (id: string | null) => {
+        set({ currentChatId: id });
+      },
+
+      updateChat: (id: string, updates: Partial<Chat>) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === id ? { ...chat, ...updates } : chat
+          )
+        }));
+      },
+
+      addMessage: (
+        chatId: string,
+        role: Message['role'],
+        content: string,
+        selectedImages?: string[],
+        messageId?: string,
+        offline?: boolean
+      ) => {
+        const id = messageId || crypto.randomUUID();
+        const message: Message = {
+          id,
+          role,
+          content,
+          timestamp: Date.now(),
+          isEditing: false,
+          selectedImages,
+          offline: offline || false
+        };
+
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId
+              ? { ...chat, messages: [...chat.messages, message] }
+              : chat
+          )
+        }));
+      },
+
+
+      clearOfflineFlag: (chatId: string, messageId: string) => {
+        set(state => ({
+          chats: state.chats.map(chat => {
+            if (chat.id === chatId) {
+              return {
+                ...chat,
+                messages: chat.messages.map(msg =>
+                  msg.id === messageId ? { ...msg, offline: false } : msg
+                )
+              };
+            }
+            return chat;
+          })
+        }));
+      },
+
+      updateMessage: (chatId: string, messageId: string, content: string) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId
+              ? {
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === messageId
+                    ? { ...msg, content, isEditing: false }
+                    : msg
+                )
+              }
+              : chat
+          )
+        }));
+      },
+
+      setMessageEditing: (chatId: string, messageId: string, isEditing: boolean) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId
+              ? {
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === messageId ? { ...msg, isEditing } : msg
+                )
+              }
+              : chat
+          )
+        }));
+      },
+
+      updateChatTitle: (chatId: string, title: string) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId ? { ...chat, title } : chat
+          )
+        }));
+      },
+
+      updateChatEmoji: (chatId: string, emoji: string) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId ? { ...chat, emoji } : chat
+          )
+        }));
+      },
+
+      addImageToChat: (chatId: string, image: Omit<ChatImage, 'id'>) => {
+        const newImage: ChatImage = {
+          ...image,
+          id: crypto.randomUUID()
+        };
+
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId
+              ? {
+                ...chat,
+                images: Array.isArray(chat.images)
+                  ? [...chat.images, newImage]
+                  : [newImage]
+              }
+              : chat
+          )
+        }));
+
+        return newImage.id;
+      },
+
+      deleteImageFromChat: (chatId: string, imageId: string) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId
+              ? {
+                ...chat,
+                images: Array.isArray(chat.images)
+                  ? chat.images.filter((img) => img.id !== imageId)
+                  : [],
+                messages: chat.messages.map((msg) => ({
+                  ...msg,
+                  selectedImages: msg.selectedImages?.filter((id) => id !== imageId)
+                }))
+              }
+              : chat
+          )
+        }));
+      },
+
+      getCurrentChat: () => {
+        const state = get();
+        return state.currentChatId ? (state.chats.find(c => c.id === state.currentChatId) || null) : null;
+      },
+
+      addProject: (name: string, description: string, systemPrompt: string) => {
+        const newProject: Project = {
+          id: crypto.randomUUID(),
+          name,
+          description,
+          systemPrompt,
+          files: [],
+          created: Date.now(),
+          lastModified: Date.now(),
+          selectedFiles: new Set<string>(),
+          directoryHandle: null
+        };
+
+        set((state) => ({
+          projects: [...state.projects, newProject],
+          currentProjectId: newProject.id
+        }));
+      },
+
+      deleteProject: (id: string) => {
+        set((state) => ({
+          projects: state.projects.filter((project) => project.id !== id),
+          currentProjectId: state.currentProjectId === id ? null : state.currentProjectId,
+          chats: state.chats.filter((chat) => chat.projectId !== id)
+        }));
+      },
+
+      setCurrentProject: (id: string | null) => {
+        set({ currentProjectId: id });
+      },
+
+      updateProject: (id: string, updates: Partial<Project>) => {
+        set((state) => ({
+          projects: state.projects.map((project) =>
+            project.id === id
+              ? { ...project, ...updates, lastModified: Date.now() }
+              : project
+          )
+        }));
+      },
+
+      addFile: (projectId: string, file: Omit<ProjectFile, 'id'>) => {
+        const newFile: ProjectFile = {
+          ...file,
+          id: crypto.randomUUID()
+        };
+
+        set((state) => ({
+          projects: state.projects.map((project) =>
+            project.id === projectId
+              ? {
+                ...project,
+                files: [...project.files, newFile],
+                lastModified: Date.now()
+              }
+              : project
+          )
+        }));
+      },
+
+      updateFile: (projectId: string, fileId: string, content: string) => {
+        set((state) => ({
+          projects: state.projects.map((project) =>
+            project.id === projectId
+              ? {
+                ...project,
+                files: project.files.map((file) =>
+                  file.id === fileId
+                    ? { ...file, content, lastModified: Date.now() }
+                    : file
+                ),
+                lastModified: Date.now()
+              }
+              : project
+          )
+        }));
+      },
+
+      deleteFile: (projectId: string, fileId: string) => {
+        set((state) => ({
+          projects: state.projects.map((project) =>
+            project.id === projectId
+              ? {
+                ...project,
+                files: project.files.filter((file) => file.id !== fileId),
+                lastModified: Date.now()
+              }
+              : project
+          )
+        }));
+      },
+
+      setApiKey: (modelId: string, apiKey: string) => {
+        set((state) => ({
+          apiKeys: { ...state.apiKeys, [modelId]: apiKey }
+        }));
+      },
+
+      setProjectDirectory: (projectId: string, handle: FileSystemDirectoryHandle | null) => {
+        set((state) => ({
+          projects: state.projects.map((project) =>
+            project.id === projectId
+              ? { ...project, directoryHandle: handle }
+              : project
+          )
+        }));
+      }
+    }),
+    {
+      name: 'ai-chat-storage',
+      partialize: (state) => ({
+        chats: state.chats,
+        projects: state.projects.map(project => ({
+          ...project,
+          directoryHandle: undefined // Ne pas persister le handle
+        })),
+        apiKeys: state.apiKeys
+      })
+    }
+  )
+);
+```
+
+src\sw-custom.js:
+```
+// src/sw-custom.js
+
+import { precacheAndRoute } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { NetworkFirst } from 'workbox-strategies';
+
+// Pré-cachez tous les assets générés par Vite
+precacheAndRoute(self.__WB_MANIFEST || []);
+
+// Mise en cache à la volée pour l’API OpenAI (vous pouvez ajouter d’autres règles si besoin)
+registerRoute(
+  ({ url }) => url.origin === 'https://api.openai.com',
+  new NetworkFirst({
+    cacheName: 'openai-api-cache',
+    plugins: []
+  })
+);
+
+// Lors d'un background sync, nous ne faisons pas l'appel nous-mêmes
+// mais nous informons le client pour qu'il procède à la synchronisation.
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-messages') {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'SYNC_OFFLINE_MESSAGES' });
+        }
+      })
+    );
+  }
+});
+
+```
+
+src\types.ts:
+```
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+  isEditing?: boolean;
+  selectedImages?: string[];
+  offline?: boolean;
+}
+
+export interface ChatImage {
+  id: string;
+  base64: string;
+  description: string;
+  name: string;
+  timestamp: number;
+}
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  path: string;
+  content: string;
+  language: string;
+  lastModified: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  systemPrompt: string;
+  files: ProjectFile[];
+  created: number;
+  lastModified: number;
+  selectedFiles: Set<string>;
+  directoryHandle?: any;
+}
+
+export interface HistoryBranch {
+  baseMessageId: string;
+  branchIndex: number;
+  messages: Message[];
+}
+
+export interface Chat {
+  id: string;
+  title: string;
+  messages: Message[];
+  model: AIModel;
+  projectId?: string;
+  emoji: string;
+  images: ChatImage[];
+  streamingEnabled: boolean;
+  systemPrompt?: string;
+}
+
+export interface AIModel {
+  id: 'gpt' | 'claude' | 'mistral';
+  name: string;
+  apiEndpoint: string;
+  defaultModel: string;
+  supportsStreaming?: boolean;
+  supportsFunctionCalling?: boolean;
+}
+
+export interface AppState {
+  chats: Chat[];
+  projects: Project[];
+  currentChatId: string | null;
+  currentProjectId: string | null;
+  apiKeys: Record<string, string>;
+
+  getCurrentChat: () => Chat | null;
+
+  addChat: (model: AIModel, projectId?: string) => void;
+  deleteChat: (id: string) => void;
+  setCurrentChat: (id: string | null) => void;
+  updateChat: (id: string, updates: Partial<Chat>) => void;
+  addMessage: (
+    chatId: string,
+    role: Message['role'],
+    content: string,
+    selectedImages?: string[],
+    messageId?: string,
+    offline?: boolean
+  ) => void;
+  clearOfflineFlag: (chatId: string, messageId: string) => void;
+  updateMessage: (chatId: string, messageId: string, content: string) => void;
+  setMessageEditing: (chatId: string, messageId: string, isEditing: boolean) => void;
+  updateChatTitle: (chatId: string, title: string) => void;
+  updateChatEmoji: (chatId: string, emoji: string) => void;
+  addImageToChat: (chatId: string, image: Omit<ChatImage, 'id'>) => string;
+  deleteImageFromChat: (chatId: string, imageId: string) => void;
+
+  addProject: (name: string, description: string, systemPrompt: string) => void;
+  deleteProject: (id: string) => void;
+  setCurrentProject: (id: string | null) => void;
+  updateProject: (id: string, updates: Partial<Project>) => void;
+  addFile: (projectId: string, file: Omit<ProjectFile, 'id'>) => void;
+  updateFile: (projectId: string, fileId: string, content: string) => void;
+  deleteFile: (projectId: string, fileId: string) => void;
+
+  setApiKey: (modelId: string, apiKey: string) => void;
+  setProjectDirectory: (projectId: string, handle: any | null) => void;
+}
+```
+
+src\utils\format.ts:
+```
+export function formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+  
+  export function formatDate(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    // Moins d'une minute
+    if (diff < 60000) {
+      return 'À l\'instant';
+    }
+    
+    // Moins d'une heure
+    if (diff < 3600000) {
+      const minutes = Math.floor(diff / 60000);
+      return `Il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    }
+    
+    // Moins d'un jour
+    if (diff < 86400000) {
+      const hours = Math.floor(diff / 3600000);
+      return `Il y a ${hours} heure${hours > 1 ? 's' : ''}`;
+    }
+    
+    // Moins d'une semaine
+    if (diff < 604800000) {
+      const days = Math.floor(diff / 86400000);
+      return `Il y a ${days} jour${days > 1 ? 's' : ''}`;
+    }
+    
+    // Format standard
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+```
+
+src\utils\offlineMessages.ts:
+```
+// src/utils/offlineMessages.ts
+
+const DB_NAME = 'offlineMessages';
+const STORE_NAME = 'messages';
+
+export function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function storePendingMessage(message: any): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.add(message);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function getPendingMessages(): Promise<any[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function removePendingMessage(id: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+```
+
+src\utils\processOfflineMessages.ts:
+```
+import { sendMessage } from '../services/ai';
+import { useStore } from '../store';
+import { getPendingMessages, removePendingMessage } from './offlineMessages';
+
+export async function processOfflineMessages() {
+  const pendingMessages = await getPendingMessages();
+  if (!pendingMessages.length) return;
+  const store = useStore.getState();
+
+  // Grouper les messages pending par chatId
+  const messagesByChat = pendingMessages.reduce((acc: Record<string, any[]>, msg) => {
+    acc[msg.chatId] = acc[msg.chatId] || [];
+    acc[msg.chatId].push(msg);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Pour chaque chat avec des messages offline
+  for (const chatId in messagesByChat) {
+    try {
+      const chat = store.chats.find(c => c.id === chatId);
+      if (!chat) continue;
+      const apiKey = store.apiKeys[chat.model.id];
+      if (!apiKey) continue;
+
+      // Pour chaque message offline pending, on retire l'indicateur offline dans le store
+      for (const offlineMsg of messagesByChat[chatId]) {
+        store.clearOfflineFlag(chatId, offlineMsg.id);
+      }
+
+      // Construire l'historique complet du chat
+      const finalMessages = [
+        { role: 'system', content: chat.systemPrompt || '' },
+        ...chat.messages.filter(m => m.role !== 'system').map(m => ({
+          role: m.role,
+          content: m.content
+        }))
+      ];
+
+      // Effectuer une seule requête API pour ce chat
+      const response = await sendMessage(chat.model, apiKey, finalMessages, chat.images, false);
+      // Ajouter la réponse de l'IA dans le chat
+      store.addMessage(chatId, 'assistant', response);
+
+      // Supprimer les messages pending pour ce chat de l'IndexedDB
+      for (const offlineMsg of messagesByChat[chatId]) {
+        await removePendingMessage(offlineMsg.id);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la synchronisation des messages offline:', error);
+    }
+  }
+}
+
+```
+
+src\vite-env.d.ts:
+```
+/// <reference types="vite/client" />
+
+```
+
+tailwind.config.js:
+```
+import typography from '@tailwindcss/typography';
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        background: '#0A0A0A',
+        surface: '#1A1A1A',
+        'surface-light': '#2A2A2A',
+        primary: '#FFFFFF',
+        secondary: '#A1A1AA',
+        accent: '#F5F5F5'
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.2s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+      },
+    },
+  },
+  plugins: [typography],
+};
+```
+
+tsconfig.app.json:
+```
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
+
+```
+
+tsconfig.json:
+```
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
+
+```
+
+tsconfig.node.json:
+```
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts"]
+}
+
+```
+
+vite.config.ts:
+```
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      // On passe en mode injectManifest pour utiliser notre SW personnalisé.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw-custom.js',
+      registerType: 'autoUpdate',
+      includeAssets: ['icon-192x192.png', 'icon-512x512.png'],
+      manifest: {
+        name: 'AI Chat App',
+        short_name: 'AI Chat',
+        description: 'Application de chat avec différentes IAs',
+        theme_color: '#0A0A0A',
+        background_color: '#0A0A0A',
+        display: 'standalone',
+        icons: [
+          {
+            src: '/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.openai\.com\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 // 24 heures
+              }
+            }
+          }
+        ]
+      }
+    })
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'lucide-react': ['lucide-react']
+        }
+      }
+    }
+  }
+});
+
 ```
 

@@ -87,8 +87,8 @@ export function ProjectPanel() {
       });
       return unwatch;
     }
-  }, [hasFileSystemAccess, selectedFile, watchFileChanges, readFileContent, refreshFileTree]);
-
+  }, [hasFileSystemAccess, selectedFile?.path]);
+  
   // Auto-save
   useEffect(() => {
     if (hasUnsavedChanges && selectedFile) {
